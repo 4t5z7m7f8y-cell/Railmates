@@ -28,40 +28,19 @@ struct ContentView: View {
                 if store.tips.isEmpty {
                     ContentUnavailableView(
                         "No Tips Yet",
-                        systemImage: "map",
-                        description: Text("Tap + to add the first location tip")
+                        systemImage: "map.fill",
+                        description: Text("Tap + to add the first location tip for fellow interrailers")
                     )
                 } else {
                     List(sortedTips) { tip in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(tip.title)
-                                .font(.headline)
-                            Text(tip.locationName)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text(tip.description)
-                                .font(.body)
-                                .lineLimit(2)
-
-                            HStack {
-                                Text(tip.category)
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue.opacity(0.15))
-                                    .clipShape(Capsule())
-
-                                Spacer()
-
-                                if let userLocation = locationManager.currentLocation {
-                                    Text(formattedDistance(tip.distance(from: userLocation)))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
+                        TipRow(
+                            tip: tip,
+                            distanceText: locationManager.currentLocation.map {
+                                formattedDistance(tip.distance(from: $0))
                             }
-                        }
-                        .padding(.vertical, 4)
+                        )
                     }
+                    .listStyle(.plain)
                 }
             }
             .navigationTitle("Railmates")
@@ -89,11 +68,70 @@ struct ContentView: View {
 
     func formattedDistance(_ meters: CLLocationDistance) -> String {
         if meters < 1000 {
-            return "\(Int(meters)) m"
+            return "\(Int(meters)) m away"
         } else {
             let km = meters / 1000
-            return String(format: "%.1f km", km)
+            return String(format: "%.1f km away", km)
         }
+    }
+}
+
+struct TipRow: View {
+    let tip: LocationTip
+    let distanceText: String?
+
+    var categoryIcon: String {
+        switch tip.category {
+        case "Hotel": return "bed.double.fill"
+        case "Food": return "fork.knife"
+        case "Activity": return "figure.walk"
+        case "Sight": return "camera.fill"
+        default: return "mappin.circle.fill"
+        }
+    }
+
+    var categoryColor: Color {
+        switch tip.category {
+        case "Hotel": return .purple
+        case "Food": return .orange
+        case "Activity": return .green
+        case "Sight": return .blue
+        default: return .gray
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(categoryColor.opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: categoryIcon)
+                    .foregroundColor(categoryColor)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(tip.title)
+                    .font(.headline)
+
+                Text(tip.locationName)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Text(tip.description)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                if let distanceText {
+                    Text(distanceText)
+                        .font(.caption)
+                        .foregroundColor(categoryColor)
+                        .padding(.top, 2)
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 

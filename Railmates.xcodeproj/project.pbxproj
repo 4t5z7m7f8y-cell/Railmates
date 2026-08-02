@@ -8,10 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		9E4386AE301FBC4000C74546 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 9E4386AD301FBC4000C74546 /* FirebaseFirestore */; };
+		9EB00A16301FC4D0006C28EC /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EB00A15301FC4D0006C28EC /* LocationManager.swift */; };
+		9EB00A18301FC50B006C28EC /* GeocodingHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EB00A17301FC50B006C28EC /* GeocodingHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		9E43869C301FB3A700C74546 /* Railmates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Railmates.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9EB00A15301FC4D0006C28EC /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		9EB00A17301FC50B006C28EC /* GeocodingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeocodingHelper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +41,8 @@
 		9E438693301FB3A700C74546 = {
 			isa = PBXGroup;
 			children = (
+				9EB00A15301FC4D0006C28EC /* LocationManager.swift */,
+				9EB00A17301FC50B006C28EC /* GeocodingHelper.swift */,
 				9E43869E301FB3A700C74546 /* Railmates */,
 				9E43869D301FB3A700C74546 /* Products */,
 			);
@@ -128,6 +134,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EB00A18301FC50B006C28EC /* GeocodingHelper.swift in Sources */,
+				9EB00A16301FC4D0006C28EC /* LocationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,6 +273,7 @@
 				DEVELOPMENT_TEAM = 83PN83WHFQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to show location tips near you and tag new tips with your current location";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -297,6 +306,7 @@
 				DEVELOPMENT_TEAM = 83PN83WHFQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used to show location tips near you and tag new tips with your current location";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

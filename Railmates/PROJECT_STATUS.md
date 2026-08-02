@@ -1,8 +1,8 @@
 # Railmates - Project Status
 
 **Last Updated**: 2026-08-02  
-**Current Version**: v2 (Complete ✅)  
-**Next Version**: v3 (Planning Phase)
+**Current Version**: v3 (Complete ✅)  
+**Next Version**: v4 (Planning Phase)
 
 ---
 
@@ -75,10 +75,31 @@ Railmates is a community-driven iOS app for interrail travelers (people travelin
 
 ---
 
-### 🔨 v3 - IN PLANNING (Next Up!)
-**Target**: TBD
+### ✅ v3 - COMPLETE
+**Shipped**: 2026-08-02
 
 **Goal**: Happenings/meetups in specific cities with "I'm joining" and notifications
+
+**Features**:
+- ✅ Phase 1: Authentication (Email/Password, User Profiles, Favorite Cities)
+- ✅ Phase 2: Core Happenings (Create, Browse, Join/Leave, Attendee Tracking)
+- ✅ Phase 3: Notifications (Local notifications, Permission handling, FCM ready)
+- ✅ Phase 4: Polish (Search, Filters, Category Icons, Sharing)
+
+**New Files**:
+- `User.swift` - User model
+- `AuthenticationManager.swift` - Auth & profile management
+- `AuthenticationView.swift` - Sign in/sign up UI
+- `ProfileView.swift` - User profile screen
+- `Happening.swift` - Event model
+- `HappeningStore.swift` - Firestore management
+- `MainTabView.swift` - Tab navigation
+- `HappeningsListView.swift` - Event list with search/filters
+- `AddHappeningView.swift` - Create event form
+- `HappeningDetailView.swift` - Event details with join/share
+- `NotificationManager.swift` - Notification system
+
+**See**: `V3_IMPLEMENTATION_SUMMARY.md` and `V3_PHASES_3_4_SUMMARY.md` for full details
 
 **Requirements**:
 1. **Authentication** (Firebase Auth - email, Google, Apple Sign-In)

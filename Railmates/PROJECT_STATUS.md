@@ -4,6 +4,8 @@
 **Current Version**: v3 (Complete ✅)  
 **Next Version**: v4 (Planning Phase)
 
+> 💡 **Returning to this project?** Read `SESSION_SUMMARY.md` for a complete overview of what we accomplished and where to continue!
+
 ---
 
 ## 🎯 Project Vision

@@ -12,14 +12,34 @@ struct ContentView: View {
     @StateObject private var store = LocationTipStore()
     @StateObject private var locationManager = LocationManager()
     @State private var showingAddSheet = false
+    @State private var selectedRadius: Double = 0 // 0 means "All"
+    @State private var viewMode: ViewMode = .list
+
+    enum ViewMode: String, CaseIterable {
+        case list = "List"
+        case map = "Map"
+    }
+
+    let radiusOptions: [(label: String, value: Double)] = [
+        ("All", 0),
+        ("Within 10 km", 10),
+        ("Within 50 km", 50),
+        ("Within 100 km", 100),
+        ("Within 500 km", 500)
+    ]
 
     var sortedTips: [LocationTip] {
         guard let userLocation = locationManager.currentLocation else {
             return store.tips
         }
-        return store.tips.sorted {
+        let sorted = store.tips.sorted {
             $0.distance(from: userLocation) < $1.distance(from: userLocation)
         }
+        if selectedRadius == 0 {
+            return sorted
+        }
+        let radiusInMeters = selectedRadius * 1000
+        return sorted.filter { $0.distance(from: userLocation) <= radiusInMeters }
     }
 
     var body: some View {
@@ -31,7 +51,13 @@ struct ContentView: View {
                         systemImage: "map.fill",
                         description: Text("Tap + to add the first location tip for fellow interrailers")
                     )
-                } else {
+                } else if sortedTips.isEmpty {
+                    ContentUnavailableView(
+                        "Nothing Nearby",
+                        systemImage: "location.slash",
+                        description: Text("Try a wider radius to see more tips")
+                    )
+                } else if viewMode == .list {
                     List(sortedTips) { tip in
                         TipRow(
                             tip: tip,
@@ -41,10 +67,32 @@ struct ContentView: View {
                         )
                     }
                     .listStyle(.plain)
+                } else {
+                    MapTipView(tips: sortedTips)
                 }
             }
             .navigationTitle("Railmates")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Picker("Radius", selection: $selectedRadius) {
+                            ForEach(radiusOptions, id: \.value) { option in
+                                Text(option.label).tag(option.value)
+                            }
+                        }
+                    } label: {
+                        Label(currentRadiusLabel, systemImage: "slider.horizontal.3")
+                    }
+                }
+                ToolbarItem(placement: .principal) {
+                    Picker("View", selection: $viewMode) {
+                        ForEach(ViewMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 150)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingAddSheet = true
@@ -64,6 +112,10 @@ struct ContentView: View {
                 locationManager.requestPermission()
             }
         }
+    }
+
+    var currentRadiusLabel: String {
+        radiusOptions.first { $0.value == selectedRadius }?.label ?? "All"
     }
 
     func formattedDistance(_ meters: CLLocationDistance) -> String {

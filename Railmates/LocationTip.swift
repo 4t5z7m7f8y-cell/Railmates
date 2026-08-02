@@ -9,7 +9,7 @@ import Foundation
 import FirebaseFirestore
 import CoreLocation
 
-struct LocationTip: Identifiable, Codable {
+struct LocationTip: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     var title: String
     var category: String

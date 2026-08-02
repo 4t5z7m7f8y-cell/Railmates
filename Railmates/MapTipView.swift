@@ -26,7 +26,7 @@ struct MapTipView: View {
         }
         .sheet(item: $selectedTip) { tip in
             TipDetailSheet(tip: tip)
-                .presentationDetents([.height(220)])
+                .presentationDetents([.height(280)])
         }
         .onAppear {
             if !hasSetInitialRegion {
@@ -69,20 +69,24 @@ struct MapTipView: View {
 
     func categoryIcon(for category: String) -> String {
         switch category {
+        case "Hostel": return "building.2.fill"
         case "Hotel": return "bed.double.fill"
         case "Food": return "fork.knife"
         case "Activity": return "figure.walk"
         case "Sight": return "camera.fill"
+        case "Station Tip": return "train.side.front.car"
         default: return "mappin.circle.fill"
         }
     }
 
     func categoryColor(for category: String) -> Color {
         switch category {
+        case "Hostel": return .indigo
         case "Hotel": return .purple
         case "Food": return .orange
         case "Activity": return .green
         case "Sight": return .blue
+        case "Station Tip": return .red
         default: return .gray
         }
     }
@@ -107,6 +111,26 @@ struct TipDetailSheet: View {
                 .padding(.vertical, 2)
                 .background(Color.blue.opacity(0.15))
                 .clipShape(Capsule())
+            
+            // Category-specific fields
+            if let stationName = tip.stationName, !stationName.isEmpty {
+                Label(stationName, systemImage: "train.side.front.car")
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+            
+            if let hasStorage = tip.hasLuggageStorage, hasStorage {
+                Label("Luggage storage", systemImage: "suitcase.fill")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+            
+            if let info = tip.practicalInfo, !info.isEmpty {
+                Text("💡 \(info)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

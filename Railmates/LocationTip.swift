@@ -20,6 +20,11 @@ struct LocationTip: Identifiable, Codable, Hashable {
     var ratingSum: Int = 0
     var ratingCount: Int = 0
 
+    // Category-specific optional fields
+    var stationName: String? = nil       // used by "Station Tip"
+    var hasLuggageStorage: Bool? = nil   // used by "Hostel"
+    var practicalInfo: String? = nil     // general-purpose, any category
+
     var averageRating: Double {
         ratingCount == 0 ? 0 : Double(ratingSum) / Double(ratingCount)
     }

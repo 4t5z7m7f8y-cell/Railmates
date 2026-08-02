@@ -35,6 +35,32 @@ struct TipDetailView: View {
                         .padding(.vertical, 2)
                         .background(Color.blue.opacity(0.15))
                         .clipShape(Capsule())
+                    
+                    // Category-specific fields
+                    if let stationName = tip.stationName, !stationName.isEmpty {
+                        Label(stationName, systemImage: "train.side.front.car")
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                            .padding(.top, 4)
+                    }
+                    
+                    if let hasStorage = tip.hasLuggageStorage, hasStorage {
+                        Label("Luggage storage available", systemImage: "suitcase.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.green)
+                            .padding(.top, 4)
+                    }
+                    
+                    if let info = tip.practicalInfo, !info.isEmpty {
+                        HStack(alignment: .top, spacing: 6) {
+                            Text("💡")
+                                .font(.subheadline)
+                            Text(info)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 4)
+                    }
                 }
 
                 Divider()

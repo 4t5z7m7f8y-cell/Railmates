@@ -138,20 +138,24 @@ struct TipRow: View {
 
     var categoryIcon: String {
         switch tip.category {
+        case "Hostel": return "building.2.fill"
         case "Hotel": return "bed.double.fill"
         case "Food": return "fork.knife"
         case "Activity": return "figure.walk"
         case "Sight": return "camera.fill"
+        case "Station Tip": return "train.side.front.car"
         default: return "mappin.circle.fill"
         }
     }
 
     var categoryColor: Color {
         switch tip.category {
+        case "Hostel": return .indigo
         case "Hotel": return .purple
         case "Food": return .orange
         case "Activity": return .green
         case "Sight": return .blue
+        case "Station Tip": return .red
         default: return .gray
         }
     }

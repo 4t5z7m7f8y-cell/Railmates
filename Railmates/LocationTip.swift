@@ -4,7 +4,6 @@
 //
 //  Created by Amir Kozarcanin on 2026-08-02.
 //
-
 import Foundation
 import FirebaseFirestore
 import CoreLocation
@@ -18,6 +17,12 @@ struct LocationTip: Identifiable, Codable, Hashable {
     var latitude: Double
     var longitude: Double
     var createdAt: Date = Date()
+    var ratingSum: Int = 0
+    var ratingCount: Int = 0
+
+    var averageRating: Double {
+        ratingCount == 0 ? 0 : Double(ratingSum) / Double(ratingCount)
+    }
 
     func distance(from userLocation: CLLocationCoordinate2D) -> CLLocationDistance {
         let tipLocation = CLLocation(latitude: latitude, longitude: longitude)

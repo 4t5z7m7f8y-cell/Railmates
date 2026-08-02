@@ -59,12 +59,16 @@ struct ContentView: View {
                     )
                 } else if viewMode == .list {
                     List(sortedTips) { tip in
-                        TipRow(
-                            tip: tip,
-                            distanceText: locationManager.currentLocation.map {
-                                formattedDistance(tip.distance(from: $0))
-                            }
-                        )
+                        NavigationLink {
+                            TipDetailView(tip: tip, store: store)
+                        } label: {
+                            TipRow(
+                                tip: tip,
+                                distanceText: locationManager.currentLocation.map {
+                                    formattedDistance(tip.distance(from: $0))
+                                }
+                            )
+                        }
                     }
                     .listStyle(.plain)
                 } else {
@@ -175,12 +179,28 @@ struct TipRow: View {
                     .foregroundColor(.primary)
                     .lineLimit(2)
 
-                if let distanceText {
-                    Text(distanceText)
-                        .font(.caption)
-                        .foregroundColor(categoryColor)
-                        .padding(.top, 2)
+                HStack(spacing: 4) {
+                    if tip.ratingCount > 0 {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundColor(.yellow)
+                        Text(String(format: "%.1f", tip.averageRating))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if let distanceText {
+                        if tip.ratingCount > 0 {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Text(distanceText)
+                            .font(.caption)
+                            .foregroundColor(categoryColor)
+                    }
                 }
+                .padding(.top, 2)
             }
         }
         .padding(.vertical, 8)

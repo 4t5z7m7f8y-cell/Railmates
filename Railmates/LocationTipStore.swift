@@ -4,7 +4,6 @@
 //
 //  Created by Amir Kozarcanin on 2026-08-02.
 //
-
 import Foundation
 import FirebaseFirestore
 import Combine
@@ -34,5 +33,38 @@ class LocationTipStore: ObservableObject {
         } catch {
             print("Error adding tip: \(error)")
         }
+    }
+
+    func addRating(tipId: String, rating: Int) {
+        let tipRef = db.collection("locationTips").document(tipId)
+        tipRef.updateData([
+            "ratingSum": FieldValue.increment(Int64(rating)),
+            "ratingCount": FieldValue.increment(Int64(1))
+        ])
+    }
+
+    func addComment(tipId: String, text: String) {
+        let comment = Comment(text: text)
+        do {
+            _ = try db.collection("locationTips").document(tipId).collection("comments").addDocument(from: comment)
+        } catch {
+            print("Error adding comment: \(error)")
+        }
+    }
+
+    func fetchComments(tipId: String, completion: @escaping ([Comment]) -> Void) {
+        db.collection("locationTips").document(tipId).collection("comments")
+            .order(by: "createdAt", descending: true)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error fetching comments: \(error)")
+                    completion([])
+                    return
+                }
+                let comments = snapshot?.documents.compactMap { doc in
+                    try? doc.data(as: Comment.self)
+                } ?? []
+                completion(comments)
+            }
     }
 }

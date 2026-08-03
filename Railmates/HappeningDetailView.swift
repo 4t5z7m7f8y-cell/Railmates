@@ -19,6 +19,9 @@ struct HappeningDetailView: View {
     @State private var showingEditSheet = false
     @State private var attendees: [User] = []
     @State private var isLoadingAttendees = false
+    @State private var isJoining = false
+    @State private var isLeaving = false
+    @State private var errorAlert: ErrorAlert?
     
     var isCreator: Bool {
         authManager.user?.id == happening.createdBy
@@ -243,20 +246,37 @@ struct HappeningDetailView: View {
                         Button {
                             joinHappening()
                         } label: {
-                            Label("I'm Joining!", systemImage: "person.badge.plus.fill")
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                            if isJoining {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            } else {
+                                Label("I'm Joining!", systemImage: "person.badge.plus.fill")
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            }
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(isJoining)
                     } else if isAttending {
                         Button {
                             leaveHappening()
                         } label: {
-                            Label("Leave Event", systemImage: "person.badge.minus")
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                            if isLeaving {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            } else {
+                                Label("Leave Event", systemImage: "person.badge.minus")
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            }
                         }
                         .buttonStyle(.bordered)
+                        .disabled(isLeaving)
                     }
                     
                     if happening.isPast {
@@ -308,6 +328,7 @@ struct HappeningDetailView: View {
         .task {
             await loadAttendees()
         }
+        .errorAlert($errorAlert)
         .alert("Delete Event", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -321,13 +342,22 @@ struct HappeningDetailView: View {
     func joinHappening() {
         guard let happeningId = happening.id,
               let userId = authManager.user?.id else { return }
+        isJoining = true
         store.join(happeningId: happeningId, userId: userId)
+        // Reset after a delay (the real-time listener will update the UI)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isJoining = false
+        }
     }
     
     func leaveHappening() {
         guard let happeningId = happening.id,
               let userId = authManager.user?.id else { return }
+        isLeaving = true
         store.leave(happeningId: happeningId, userId: userId)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isLeaving = false
+        }
     }
     
     func deleteHappening() {

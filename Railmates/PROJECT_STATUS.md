@@ -1,8 +1,8 @@
 # Railmates - Project Status
 
-**Last Updated**: 2026-08-02  
-**Current Version**: v3 (Complete ✅)  
-**Next Version**: v4 (Planning Phase)
+**Last Updated**: 2026-08-03  
+**Current Version**: v4 (Complete ✅)  
+**Next Version**: v5 (Planning Phase)
 
 > 💡 **Returning to this project?** Read `SESSION_SUMMARY.md` for a complete overview of what we accomplished and where to continue!
 
@@ -120,20 +120,51 @@ Railmates is a community-driven iOS app for interrail travelers (people travelin
 
 ---
 
-### 📝 v4 - PLANNED
+### ✅ v4 - COMPLETE
+**Shipped**: 2026-08-03
+
 **Goal**: Trip journals
 
-Users document their interrail trips:
-- Cities visited
-- What they did
-- Photos
-- Browsable by other users
-- Could integrate with tips (reference tips they used)
+**Features**:
+- ✅ Create, edit, delete journals
+- ✅ Add entries with city, date, title, notes
+- ✅ Public/private journals
+- ✅ Browse public journals from other travelers
+- ✅ "My Journals" filter
+- ✅ Full-text search (title, description, countries)
+- ✅ Creator attribution (shows who created each journal)
+- ✅ Share journals via iOS share sheet
+- ✅ Duration calculation & "Ongoing" badge
+- ✅ Real-time updates with Firestore listeners
+- ✅ Beautiful empty states and loading indicators
+- ✅ Pull to refresh
+
+**Models**:
+- `Journal` - Trip journals with dates, countries, privacy settings
+- `JournalEntry` - Daily entries within journals
+
+**Files**:
+- `Journal.swift` - Models
+- `JournalStore.swift` - Firestore CRUD + creator name fetching
+- `JournalsListView.swift` - List with search & filters
+- `AddJournalView.swift` - Create journal form
+- `JournalDetailView.swift` - Detail view with entries, edit, delete, share
+- `EditJournalView` - Edit journal details
+
+**Future Enhancements** (not yet implemented):
+- Photo upload for entries
+- Link tips to journal entries
+- Link happenings to journal entries
+- Map view of journal route
+- Comments on journals
+- Export to PDF
+
+**See**: `V4_IMPLEMENTATION_SUMMARY.md` for full details
 
 ---
 
-### 🤖 v5 - PLANNED
-**Goal**: AI assistant
+### 📝 v5 - PLANNED
+**Goal**: AI assistant (previously v5, now next)
 
 Natural language Q&A pulling from:
 - User-generated tips
@@ -162,18 +193,51 @@ LocationTip {
 Comment {
     id, text, createdAt
 }
+
+User {
+    id, displayName, email, createdAt,
+    favoriteCities, notificationToken
+}
+
+Happening {
+    id, title, description, city, locationName,
+    latitude, longitude, dateTime, createdBy,
+    attendeeIds, maxAttendees, category
+}
+
+Journal {
+    id, title, description, startDate, endDate,
+    createdBy, createdAt, coverPhotoURL,
+    isPublic, countries
+}
+
+JournalEntry {
+    id, journalId, city, country, date, title,
+    notes, photoURLs, latitude, longitude,
+    visitedTipIds, attendedHappeningIds
+}
 ```
 
 ### Stores (ObservableObject)
 - `LocationTipStore` - Manages tips, ratings, comments
+- `HappeningStore` - Manages happenings/events
+- `JournalStore` - Manages journals, entries, creator names
 - `LocationManager` - User location tracking
 
 ### Main Views
-- `ContentView` - Main screen (list/map toggle, radius filter)
+- `MainTabView` - Tab navigation (Tips, Events, Journals, Profile)
+- `ContentView` - Tips list/map with radius filter
 - `AddLocationTipView` - Form to create tips
 - `TipDetailView` - Full detail with ratings/comments
 - `MapTipView` - Map view with markers
-- `TipDetailSheet` - Quick preview on map
+- `HappeningsListView` - Events list with search/filters
+- `AddHappeningView` - Create event form
+- `HappeningDetailView` - Event details with join/share
+- `JournalsListView` - Journals list with search/filters
+- `AddJournalView` - Create journal form
+- `JournalDetailView` - Journal details with entries, edit, share
+- `ProfileView` - User profile with favorite cities
+- `AuthenticationView` - Sign in/up UI
 
 ### Helpers
 - `geocode()` - Converts location names to coordinates
@@ -189,20 +253,28 @@ locationTips/
     comments/
       {commentId}/
         - text, createdAt
-```
 
-**Coming in v3**:
-```
 users/
   {userId}/
-    - displayName, email, favoriteCities, notificationToken
+    - displayName, email, favoriteCities, notificationToken, createdAt
 
 happenings/
   {happeningId}/
-    - event details
-    attendees/
-      {userId}/
-        - joinedAt
+    - title, description, city, locationName
+    - latitude, longitude, dateTime
+    - createdBy, createdAt, attendeeIds
+    - maxAttendees, category
+
+journals/
+  {journalId}/
+    - title, description, startDate, endDate
+    - createdBy, createdAt, coverPhotoURL
+    - isPublic, countries
+    entries/
+      {entryId}/
+        - journalId, city, country, date, title
+        - notes, photoURLs, latitude, longitude
+        - visitedTipIds, attendedHappeningIds
 ```
 
 ---
@@ -216,16 +288,21 @@ happenings/
 
 ---
 
-## 🚀 Next Steps (When Starting v3)
+## 🚀 Next Steps (When Starting v5)
 
-1. **Install Firebase Authentication SDK** (if not already)
-2. **Create User model** in `User.swift`
-3. **Create AuthenticationManager** to handle sign-in/sign-up
-4. **Build sign-in UI** (email + social providers)
-5. **Update tip creation** to associate with user ID
-6. **Build Happening model and store**
-7. **Implement happening UI** (list, create, detail)
-8. **Add notifications** (local + push)
+1. **Research Foundation Models framework** - Apple's on-device LLM API
+2. **Design AI interaction UI** - Chat interface or assistant view
+3. **Implement RAG system** - Retrieve relevant data from Firestore
+4. **Create prompts** - Design prompts for travel assistance
+5. **Test on-device performance** - Ensure smooth experience
+6. **Consider Siri integration** - App Intents for voice commands
+7. **Privacy considerations** - Ensure user data stays private
+
+**Or continue polishing v4**:
+- Add photo upload for journal entries
+- Implement tip/happening integration
+- Add map view for journal routes
+- Export journals to PDF
 
 ---
 

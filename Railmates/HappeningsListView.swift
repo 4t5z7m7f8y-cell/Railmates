@@ -17,6 +17,8 @@ struct HappeningsListView: View {
     @State private var searchText = ""
     @State private var selectedCategory: String? = nil
     @State private var showOnlyMyEvents = false
+    @State private var showPastEvents = false
+    @State private var errorAlert: ErrorAlert?
     
     var filteredHappenings: [Happening] {
         var filtered = store.happenings
@@ -59,7 +61,14 @@ struct HappeningsListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.happenings.isEmpty {
+                if store.isLoading && store.happenings.isEmpty {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("Loading events...")
+                            .foregroundColor(.secondary)
+                    }
+                } else if store.happenings.isEmpty {
                     ContentUnavailableView(
                         "No Happenings Yet",
                         systemImage: "calendar.badge.exclamationmark",
@@ -84,12 +93,19 @@ struct HappeningsListView: View {
                         }
                     }
                     .searchable(text: $searchText, prompt: "Search events...")
+                    .refreshable {
+                        store.fetchUpcoming()
+                    }
                 }
             }
-            .navigationTitle("Happenings")
+            .navigationTitle(showPastEvents ? "Past Events" : "Happenings")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
+                        Section("View") {
+                            Toggle("Show Past Events", isOn: $showPastEvents)
+                        }
+                        
                         Section("Filters") {
                             Toggle("My Events Only", isOn: $showOnlyMyEvents)
                         }
@@ -141,6 +157,15 @@ struct HappeningsListView: View {
             .onAppear {
                 store.fetchUpcoming()
                 locationManager.requestPermission()
+            }
+            .errorAlert($errorAlert)
+            .onChange(of: store.errorMessage) { oldValue, newValue in
+                if let error = newValue {
+                    errorAlert = ErrorAlert(
+                        title: "Error",
+                        message: error
+                    )
+                }
             }
         }
     }

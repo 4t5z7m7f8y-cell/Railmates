@@ -31,14 +31,7 @@ class HappeningStore: ObservableObject {
     
     func create(_ happening: Happening) {
         do {
-            let docRef = try db.collection("happenings").addDocument(from: happening)
-            
-            // Schedule reminder for creator
-            Task {
-                await NotificationManager.shared.scheduleHappeningReminder(for: happening)
-            }
-            
-            print("✅ Created happening with ID: \(docRef.documentID)")
+            _ = try db.collection("happenings").addDocument(from: happening)
         } catch {
             print("Error creating happening: \(error)")
         }
@@ -52,15 +45,6 @@ class HappeningStore: ObservableObject {
         ]) { error in
             if let error = error {
                 print("Error joining happening: \(error)")
-            } else {
-                // Schedule reminder for this user
-                happeningRef.getDocument { snapshot, _ in
-                    if let happening = try? snapshot?.data(as: Happening.self) {
-                        Task {
-                            await NotificationManager.shared.scheduleHappeningReminder(for: happening)
-                        }
-                    }
-                }
             }
         }
     }
@@ -73,11 +57,6 @@ class HappeningStore: ObservableObject {
         ]) { error in
             if let error = error {
                 print("Error leaving happening: \(error)")
-            } else {
-                // Cancel reminder for this user
-                Task {
-                    await NotificationManager.shared.cancelHappeningReminder(happeningId: happeningId)
-                }
             }
         }
     }
@@ -88,5 +67,32 @@ class HappeningStore: ObservableObject {
                 print("Error deleting happening: \(error)")
             }
         }
+    }
+    
+    func update(_ happening: Happening) {
+        guard let happeningId = happening.id else { return }
+        
+        do {
+            try db.collection("happenings").document(happeningId).setData(from: happening, merge: true)
+        } catch {
+            print("Error updating happening: \(error)")
+        }
+    }
+    
+    func fetchUsers(userIds: [String]) async -> [User] {
+        var users: [User] = []
+        
+        for userId in userIds {
+            do {
+                let document = try await db.collection("users").document(userId).getDocument()
+                if let user = try? document.data(as: User.self) {
+                    users.append(user)
+                }
+            } catch {
+                print("Error fetching user \(userId): \(error)")
+            }
+        }
+        
+        return users
     }
 }

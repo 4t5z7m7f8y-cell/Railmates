@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import MapKit
 
 struct HappeningsListView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @StateObject private var store = HappeningStore()
+    @StateObject private var locationManager = LocationManager()
     @State private var showingAddSheet = false
     @State private var selectedCity: String? = nil
     @State private var searchText = ""
@@ -74,7 +76,11 @@ struct HappeningsListView: View {
                         NavigationLink {
                             HappeningDetailView(happening: happening, store: store)
                         } label: {
-                            HappeningRow(happening: happening, currentUserId: authManager.user?.id)
+                            HappeningRow(
+                                happening: happening,
+                                currentUserId: authManager.user?.id,
+                                userLocation: locationManager.currentLocation
+                            )
                         }
                     }
                     .searchable(text: $searchText, prompt: "Search events...")
@@ -134,6 +140,7 @@ struct HappeningsListView: View {
             }
             .onAppear {
                 store.fetchUpcoming()
+                locationManager.requestPermission()
             }
         }
     }
@@ -142,6 +149,7 @@ struct HappeningsListView: View {
 struct HappeningRow: View {
     let happening: Happening
     let currentUserId: String?
+    let userLocation: CLLocationCoordinate2D?
     
     var categoryIcon: String {
         switch happening.category {

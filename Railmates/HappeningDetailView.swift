@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import EventKit
 
 struct HappeningDetailView: View {
     let happening: Happening
@@ -15,6 +16,9 @@ struct HappeningDetailView: View {
     
     @State private var showingDeleteAlert = false
     @State private var showingShareSheet = false
+    @State private var showingEditSheet = false
+    @State private var attendees: [User] = []
+    @State private var isLoadingAttendees = false
     
     var isCreator: Bool {
         authManager.user?.id == happening.createdBy
@@ -27,6 +31,27 @@ struct HappeningDetailView: View {
     
     var canJoin: Bool {
         !isAttending && !happening.isFull && !happening.isPast
+    }
+    
+    var timeUntilEvent: String {
+        let now = Date()
+        let timeInterval = happening.dateTime.timeIntervalSince(now)
+        
+        if timeInterval < 0 {
+            return "Event has passed"
+        }
+        
+        let days = Int(timeInterval) / 86400
+        let hours = (Int(timeInterval) % 86400) / 3600
+        let minutes = (Int(timeInterval) % 3600) / 60
+        
+        if days > 0 {
+            return "Starting in \(days) day\(days == 1 ? "" : "s"), \(hours) hour\(hours == 1 ? "" : "s")"
+        } else if hours > 0 {
+            return "Starting in \(hours) hour\(hours == 1 ? "" : "s"), \(minutes) minute\(minutes == 1 ? "" : "s")"
+        } else {
+            return "Starting in \(minutes) minute\(minutes == 1 ? "" : "s")"
+        }
     }
     
     var shareText: String {
@@ -90,6 +115,12 @@ struct HappeningDetailView: View {
                     )
                     .font(.subheadline)
                     
+                    if !happening.isPast {
+                        Label(timeUntilEvent, systemImage: "clock.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.orange)
+                    }
+                    
                     Label(happening.city, systemImage: "location.fill")
                         .font(.subheadline)
                     
@@ -125,10 +156,39 @@ struct HappeningDetailView: View {
                         Text("No one has joined yet")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                    } else {
+                    } else if isLoadingAttendees {
+                        ProgressView()
+                            .padding(.vertical, 4)
+                    } else if attendees.isEmpty {
                         Text("\(happening.attendeeIds.count) people attending")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(attendees) { attendee in
+                                HStack(spacing: 8) {
+                                    // Avatar circle with initials
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.2))
+                                            .frame(width: 32, height: 32)
+                                        Text(attendee.displayName.prefix(1).uppercased())
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    Text(attendee.displayName)
+                                        .font(.subheadline)
+                                    
+                                    if attendee.id == happening.createdBy {
+                                        Text("(Organizer)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 
@@ -157,6 +217,18 @@ struct HappeningDetailView: View {
                 
                 // Action Buttons
                 VStack(spacing: 12) {
+                    // Add to Calendar button (for all attendees and past events)
+                    if isAttending || happening.isPast {
+                        Button {
+                            addToCalendar()
+                        } label: {
+                            Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    
                     if isCreator {
                         Button(role: .destructive) {
                             showingDeleteAlert = true
@@ -206,15 +278,35 @@ struct HappeningDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingShareSheet = true
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
+                HStack(spacing: 12) {
+                    if isCreator && !happening.isPast {
+                        Button {
+                            showingEditSheet = true
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+                    }
+                    
+                    Button {
+                        showingShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            if let user = authManager.user {
+                EditHappeningView(happening: happening, userId: user.id ?? "") { updatedHappening in
+                    store.update(updatedHappening)
                 }
             }
         }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [shareText])
+        }
+        .task {
+            await loadAttendees()
         }
         .alert("Delete Event", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -241,6 +333,42 @@ struct HappeningDetailView: View {
     func deleteHappening() {
         guard let happeningId = happening.id else { return }
         store.delete(happeningId: happeningId)
+    }
+    
+    func loadAttendees() async {
+        guard !happening.attendeeIds.isEmpty else { return }
+        
+        isLoadingAttendees = true
+        
+        let fetchedAttendees = await store.fetchUsers(userIds: happening.attendeeIds)
+        
+        await MainActor.run {
+            self.attendees = fetchedAttendees
+            self.isLoadingAttendees = false
+        }
+    }
+    
+    func addToCalendar() {
+        let eventStore = EKEventStore()
+        
+        eventStore.requestAccess(to: .event) { granted, error in
+            if granted && error == nil {
+                let event = EKEvent(eventStore: eventStore)
+                event.title = happening.title
+                event.startDate = happening.dateTime
+                event.endDate = happening.dateTime.addingTimeInterval(3600) // 1 hour duration
+                event.location = happening.locationName ?? happening.city
+                event.notes = happening.description
+                event.calendar = eventStore.defaultCalendarForNewEvents
+                
+                do {
+                    try eventStore.save(event, span: .thisEvent)
+                    print("✅ Event added to calendar")
+                } catch {
+                    print("Error saving event to calendar: \(error)")
+                }
+            }
+        }
     }
 }
 // MARK: - Share Sheet

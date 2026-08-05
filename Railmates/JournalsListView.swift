@@ -37,13 +37,34 @@ struct JournalsListView: View {
                             .foregroundColor(.secondary)
                     }
                 } else if filteredJournals.isEmpty {
-                    ContentUnavailableView(
-                        searchText.isEmpty ? (showMyJournalsOnly ? "No Journals Yet" : "No Public Journals") : "No Results",
-                        systemImage: "book.closed.fill",
-                        description: Text(searchText.isEmpty ? 
-                            (showMyJournalsOnly ? "Tap + to document your first trip" : "No one has shared their journey yet") :
-                            "Try a different search term")
-                    )
+                    VStack(spacing: 20) {
+                        ContentUnavailableView {
+                            Label(
+                                searchText.isEmpty ? (showMyJournalsOnly ? "No Journals Yet" : "No Public Journals") : "No Results",
+                                systemImage: searchText.isEmpty ? "book.closed.fill" : "magnifyingglass"
+                            )
+                        } description: {
+                            Text(searchText.isEmpty ? 
+                                (showMyJournalsOnly ? "Start documenting your adventures!" : "No one has shared their journey yet") :
+                                "Try a different search term")
+                        }
+                        
+                        // Action button for empty state
+                        if searchText.isEmpty && showMyJournalsOnly {
+                            Button {
+                                showingAddSheet = true
+                            } label: {
+                                Label("Create Your First Journal", systemImage: "plus.circle.fill")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding()
                 } else {
                     List(filteredJournals) { journal in
                         NavigationLink {
@@ -127,70 +148,92 @@ struct JournalRow: View {
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Cover photo or placeholder
+            // Cover photo or placeholder with gradient
             ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 60, height: 60)
+                LinearGradient(
+                    colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.2)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(width: 70, height: 70)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 
                 Image(systemName: "book.fill")
                     .font(.title2)
                     .foregroundColor(.blue)
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(journal.title)
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 6) {
+                // Title and badges row
+                HStack(alignment: .top) {
+                    Text(journal.title)
+                        .font(.headline)
+                        .lineLimit(2)
+                    
+                    Spacer(minLength: 4)
+                    
+                    // Status badges
+                    HStack(spacing: 4) {
+                        if journal.isOngoing {
+                            Image(systemName: "circle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                        }
+                        
+                        if !journal.isPublic {
+                            Image(systemName: "lock.fill")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                }
                 
-                // Show creator name if available
+                // Creator name with loading state
                 if let name = creatorName {
-                    Text("by \(name)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Text(journal.duration)
-                    .font(.subheadline)
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.circle")
+                            .font(.caption2)
+                        Text(name)
+                            .font(.caption)
+                    }
                     .foregroundColor(.secondary)
-                
-                if !journal.countries.isEmpty {
-                    Text(journal.countries.joined(separator: ", "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                } else {
+                    // Skeleton loader
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.circle")
+                            .font(.caption2)
+                        Text("Loading...")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .redacted(reason: .placeholder)
                 }
                 
+                // Duration and countries in one line
+                HStack(spacing: 8) {
+                    Label(journal.duration, systemImage: "calendar")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    if !journal.countries.isEmpty {
+                        Label(journal.countries.prefix(2).joined(separator: ", "), systemImage: "globe")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                
+                // Description (if exists)
                 if !journal.description.isEmpty {
                     Text(journal.description)
-                        .font(.body)
-                        .foregroundColor(.primary)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .lineLimit(2)
-                }
-                
-                HStack(spacing: 6) {
-                    if journal.isOngoing {
-                        Text("Ongoing")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.green.opacity(0.15))
-                            .foregroundColor(.green)
-                            .clipShape(Capsule())
-                    }
-                    
-                    if journal.isPublic {
-                        Image(systemName: "globe")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Image(systemName: "lock.fill")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                        .padding(.top, 2)
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
     }
 }
 

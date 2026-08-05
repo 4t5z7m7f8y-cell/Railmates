@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+import PhotosUI
+import FirebaseStorage
+import MapKit
 
 struct JournalDetailView: View {
     let journal: Journal
@@ -250,11 +253,36 @@ struct JournalEntryCard: View {
                     .foregroundColor(.primary)
             }
             
-            // Placeholder for photos
             if !entry.photoURLs.isEmpty {
-                Text("\(entry.photoURLs.count) photo\(entry.photoURLs.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(entry.photoURLs, id: \.self) { urlString in
+                            if let url = URL(string: urlString) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 120, height: 90)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    case .failure:
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.gray.opacity(0.2))
+                                            .frame(width: 120, height: 90)
+                                            .overlay(Image(systemName: "photo").foregroundColor(.secondary))
+                                    default:
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.gray.opacity(0.1))
+                                            .frame(width: 120, height: 90)
+                                            .overlay(ProgressView())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
             }
         }
         .padding()
@@ -264,31 +292,96 @@ struct JournalEntryCard: View {
     }
 }
 
-// Placeholder for adding entries
 struct AddJournalEntryView: View {
     @Environment(\.dismiss) private var dismiss
     let journalId: String
     var onSave: (JournalEntry) -> Void
-    
+
     @State private var title = ""
     @State private var notes = ""
     @State private var city = ""
     @State private var country = ""
     @State private var date = Date()
-    
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var photoData: [Data] = []
+    @State private var isDetectingCountry = false
+    @State private var autoDetectedCountry = ""
+    @State private var isUploading = false
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Entry Details") {
                     TextField("Title (e.g. Arrived in Paris!)", text: $title)
                     TextField("City", text: $city)
-                    TextField("Country", text: $country)
+                    HStack {
+                        TextField("Country", text: $country)
+                        if isDetectingCountry {
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        }
+                    }
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                 }
-                
+
                 Section("Notes") {
                     TextField("What did you do? What did you see?", text: $notes, axis: .vertical)
                         .lineLimit(5...10)
+                }
+
+                Section {
+                    PhotosPicker(
+                        selection: $selectedPhotos,
+                        maxSelectionCount: 5,
+                        matching: .images
+                    ) {
+                        Label("Add Photos (up to 5)", systemImage: "photo.on.rectangle.angled")
+                    }
+
+                    if !photoData.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(photoData.indices, id: \.self) { index in
+                                    if let uiImage = UIImage(data: photoData[index]) {
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 100, height: 100)
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                            Button {
+                                                withAnimation {
+                                                    photoData.remove(at: index)
+                                                    selectedPhotos.remove(at: index)
+                                                }
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.title3)
+                                                    .foregroundStyle(.white)
+                                                    .background(
+                                                        Circle()
+                                                            .fill(.black.opacity(0.6))
+                                                            .frame(width: 24, height: 24)
+                                                    )
+                                            }
+                                            .offset(x: 8, y: -8)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+
+                        Text("\(photoData.count) photo\(photoData.count == 1 ? "" : "s") selected")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } header: {
+                    Text("Photos")
+                } footer: {
+                    Text(photoData.isEmpty ? "Add photos to capture this moment" : "Tap X to remove a photo")
+                        .font(.caption)
                 }
             }
             .navigationTitle("New Entry")
@@ -298,22 +391,115 @@ struct AddJournalEntryView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let entry = JournalEntry(
-                            journalId: journalId,
-                            city: city,
-                            country: country,
-                            date: date,
-                            title: title,
-                            notes: notes
-                        )
-                        onSave(entry)
-                        dismiss()
+                    Button(isUploading ? "Uploading..." : "Save") {
+                        Task {
+                            isUploading = true
+                            let photoURLs = await uploadPhotos()
+                            let entry = JournalEntry(
+                                journalId: journalId,
+                                city: city,
+                                country: country,
+                                date: date,
+                                title: title,
+                                notes: notes,
+                                photoURLs: photoURLs
+                            )
+                            onSave(entry)
+                            dismiss()
+                        }
                     }
-                    .disabled(title.isEmpty || city.isEmpty)
+                    .disabled(title.isEmpty || city.isEmpty || isUploading)
                 }
             }
+            .onChange(of: selectedPhotos) { oldValue, newValue in
+                Task {
+                    photoData = []
+                    for photo in newValue {
+                        if let data = try? await photo.loadTransferable(type: Data.self) {
+                            photoData.append(data)
+                        }
+                    }
+                }
+            }
+            // Debounced country auto-detection: fires 700ms after city stops changing
+            .task(id: city) {
+                let trimmed = city.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty else { return }
+                try? await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled else { return }
+                await detectCountry(for: trimmed)
+            }
         }
+    }
+
+    // Geocodes city name and fills country only if the user hasn't manually overridden it
+    private func detectCountry(for cityName: String) async {
+        await MainActor.run { isDetectingCountry = true }
+        do {
+            guard let request = MKGeocodingRequest(addressString: cityName) else {
+                await MainActor.run { isDetectingCountry = false }
+                return
+            }
+            let mapItems = try await request.mapItems
+            let detected: String?
+            if #available(iOS 26, *) {
+                detected = mapItems.first?.addressRepresentations?.regionName
+            } else {
+                detected = mapItems.first?.placemark.country
+            }
+            if let detected {
+                await MainActor.run {
+                    if country.isEmpty || country == autoDetectedCountry {
+                        country = detected
+                        autoDetectedCountry = detected
+                    }
+                    isDetectingCountry = false
+                }
+                return
+            }
+        } catch {}
+        await MainActor.run { isDetectingCountry = false }
+    }
+
+    // Compresses and uploads photos to Firebase Storage, returns download URLs
+    private func uploadPhotos() async -> [String] {
+        guard !photoData.isEmpty else { return [] }
+        let storage = Storage.storage()
+        var urls: [String] = []
+        let timestamp = Int(Date().timeIntervalSince1970)
+        for (index, data) in photoData.enumerated() {
+            guard let compressed = UIImage(data: data)?.jpegData(compressionQuality: 0.7) else { continue }
+            let path = "journals/\(journalId)/\(timestamp)_\(index).jpg"
+            let ref = storage.reference().child(path)
+            do {
+                let metadata = StorageMetadata()
+                metadata.contentType = "image/jpeg"
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    ref.putData(compressed, metadata: metadata) { _, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else {
+                            continuation.resume()
+                        }
+                    }
+                }
+                let url: URL = try await withCheckedThrowingContinuation { continuation in
+                    ref.downloadURL { url, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                        } else if let url = url {
+                            continuation.resume(returning: url)
+                        } else {
+                            continuation.resume(throwing: URLError(.badServerResponse))
+                        }
+                    }
+                }
+                urls.append(url.absoluteString)
+            } catch {
+                print("Photo upload failed for index \(index): \(error)")
+            }
+        }
+        return urls
     }
 }
 

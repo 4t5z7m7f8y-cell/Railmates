@@ -10,6 +10,7 @@
 		9E1BB932301FE69E00534F06 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9E1BB931301FE69E00534F06 /* FirebaseAuth */; };
 		9E1BB938301FE92B00534F06 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 9E1BB937301FE92B00534F06 /* FirebaseMessaging */; };
 		9E4386AE301FBC4000C74546 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 9E4386AD301FBC4000C74546 /* FirebaseFirestore */; };
+		9E4D753C3021BA37006EBA23 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 9E4D753B3021BA37006EBA23 /* FirebaseStorage */; };
 		9EB00A16301FC4D0006C28EC /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EB00A15301FC4D0006C28EC /* LocationManager.swift */; };
 		9EB00A18301FC50B006C28EC /* GeocodingHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EB00A17301FC50B006C28EC /* GeocodingHelper.swift */; };
 /* End PBXBuildFile section */
@@ -34,6 +35,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9E1BB938301FE92B00534F06 /* FirebaseMessaging in Frameworks */,
+				9E4D753C3021BA37006EBA23 /* FirebaseStorage in Frameworks */,
 				9E4386AE301FBC4000C74546 /* FirebaseFirestore in Frameworks */,
 				9E1BB932301FE69E00534F06 /* FirebaseAuth in Frameworks */,
 			);
@@ -91,6 +93,7 @@
 				9E4386AD301FBC4000C74546 /* FirebaseFirestore */,
 				9E1BB931301FE69E00534F06 /* FirebaseAuth */,
 				9E1BB937301FE92B00534F06 /* FirebaseMessaging */,
+				9E4D753B3021BA37006EBA23 /* FirebaseStorage */,
 			);
 			productName = Railmates;
 			productReference = 9E43869C301FB3A700C74546 /* Railmates.app */;
@@ -392,6 +395,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9E4386AC301FBC4000C74546 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		9E4D753B3021BA37006EBA23 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9E4386AC301FBC4000C74546 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

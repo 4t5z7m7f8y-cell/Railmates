@@ -20,6 +20,7 @@ struct LocationTip: Identifiable, Codable, Hashable {
     var createdBy: String? = nil
     var ratingSum: Int = 0
     var ratingCount: Int = 0
+    var likedBy: [String] = []
 
     // Category-specific optional fields
     var stationName: String? = nil       // used by "Station Tip"
@@ -29,6 +30,8 @@ struct LocationTip: Identifiable, Codable, Hashable {
     var averageRating: Double {
         ratingCount == 0 ? 0 : Double(ratingSum) / Double(ratingCount)
     }
+
+    var likeCount: Int { likedBy.count }
 
     func distance(from userLocation: CLLocationCoordinate2D) -> CLLocationDistance {
         let tipLocation = CLLocation(latitude: latitude, longitude: longitude)

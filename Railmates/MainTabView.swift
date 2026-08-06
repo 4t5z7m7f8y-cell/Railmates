@@ -9,29 +9,35 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthenticationManager
-    
+
     var body: some View {
         TabView {
+            HomeView()
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
+                }
+
             ContentView()
                 .tabItem {
-                    Label("Tips", systemImage: "map.fill")
+                    Label("Tips", systemImage: "mappin.and.ellipse")
                 }
-            
+
+            TripsView()
+                .tabItem {
+                    Label("Trips", systemImage: "train.side.front.car")
+                }
+
             HappeningsListView()
                 .tabItem {
                     Label("Events", systemImage: "calendar")
                 }
-            
-            TripStoriesListView()
-                .tabItem {
-                    Label("Stories", systemImage: "book.pages.fill")
-                }
-            
+
             ProfileView()
                 .tabItem {
-                    Label("Profile", systemImage: "person.fill")
+                    Label("Me", systemImage: "person.fill")
                 }
         }
+        .tint(.appGreen)
     }
 }
 

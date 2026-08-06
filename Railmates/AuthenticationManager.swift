@@ -145,17 +145,75 @@ class AuthenticationManager: ObservableObject {
     
     func updateNotificationToken(_ token: String) async {
         guard let userId = user?.id else { return }
-        
+
         do {
             try await db.collection("users").document(userId).updateData([
                 "notificationToken": token
             ])
-            
+
             self.user?.notificationToken = token
-            
+
         } catch {
             self.errorMessage = error.localizedDescription
             print("Update notification token error: \(error)")
+        }
+    }
+
+    // MARK: - Bookmarks
+
+    func toggleSavedTip(_ tipId: String) async {
+        guard let userId = user?.id else { return }
+        let alreadySaved = user?.savedTipIds?.contains(tipId) ?? false
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "savedTipIds": alreadySaved ? FieldValue.arrayRemove([tipId]) : FieldValue.arrayUnion([tipId])
+            ])
+            if alreadySaved {
+                user?.savedTipIds?.removeAll { $0 == tipId }
+            } else {
+                if user?.savedTipIds == nil { user?.savedTipIds = [] }
+                user?.savedTipIds?.append(tipId)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func toggleSavedStory(_ storyId: String) async {
+        guard let userId = user?.id else { return }
+        let alreadySaved = user?.savedStoryIds?.contains(storyId) ?? false
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "savedStoryIds": alreadySaved ? FieldValue.arrayRemove([storyId]) : FieldValue.arrayUnion([storyId])
+            ])
+            if alreadySaved {
+                user?.savedStoryIds?.removeAll { $0 == storyId }
+            } else {
+                if user?.savedStoryIds == nil { user?.savedStoryIds = [] }
+                user?.savedStoryIds?.append(storyId)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Following
+
+    func toggleFollow(userId targetId: String) async {
+        guard let myId = user?.id, myId != targetId else { return }
+        let alreadyFollowing = user?.following?.contains(targetId) ?? false
+        do {
+            try await db.collection("users").document(myId).updateData([
+                "following": alreadyFollowing ? FieldValue.arrayRemove([targetId]) : FieldValue.arrayUnion([targetId])
+            ])
+            if alreadyFollowing {
+                user?.following?.removeAll { $0 == targetId }
+            } else {
+                if user?.following == nil { user?.following = [] }
+                user?.following?.append(targetId)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

@@ -92,6 +92,26 @@ struct ProfileView: View {
                         .font(.caption)
                 }
                 
+                // Saved Items Section
+                Section("Saved") {
+                    NavigationLink {
+                        SavedView()
+                    } label: {
+                        HStack {
+                            Label("Saved Items", systemImage: "bookmark.fill")
+                            Spacer()
+                            let tipCount = authManager.user?.savedTipIds?.count ?? 0
+                            let storyCount = authManager.user?.savedStoryIds?.count ?? 0
+                            let total = tipCount + storyCount
+                            if total > 0 {
+                                Text("\(total)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+
                 // Account Section
                 Section("Account") {
                     Button(role: .destructive) {

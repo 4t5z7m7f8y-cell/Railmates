@@ -21,6 +21,20 @@ struct TipDetailView: View {
         tip.createdBy != nil && tip.createdBy == authManager.user?.id
     }
 
+    var currentTip: LocationTip {
+        store.tips.first(where: { $0.id == tip.id }) ?? tip
+    }
+
+    var isLiked: Bool {
+        guard let userId = authManager.user?.id else { return false }
+        return currentTip.likedBy.contains(userId)
+    }
+
+    var isSaved: Bool {
+        guard let tipId = tip.id else { return false }
+        return authManager.user?.savedTipIds?.contains(tipId) ?? false
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -68,6 +82,35 @@ struct TipDetailView: View {
                         }
                         .padding(.top, 4)
                     }
+                }
+
+                // Like + save action bar
+                HStack(spacing: 12) {
+                    Button {
+                        toggleLike()
+                    } label: {
+                        Label("\(currentTip.likeCount)", systemImage: isLiked ? "heart.fill" : "heart")
+                            .font(.subheadline)
+                            .foregroundColor(isLiked ? .red : .secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(isLiked ? Color.red.opacity(0.1) : Color.gray.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+
+                    Button {
+                        toggleSave()
+                    } label: {
+                        Label(isSaved ? "Saved" : "Save", systemImage: isSaved ? "bookmark.fill" : "bookmark")
+                            .font(.subheadline)
+                            .foregroundColor(isSaved ? .blue : .secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(isSaved ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer()
                 }
 
                 Divider()
@@ -127,6 +170,12 @@ struct TipDetailView: View {
                         ForEach(comments) { comment in
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 2) {
+                                    if let name = comment.authorName {
+                                        Text(name)
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.secondary)
+                                    }
                                     Text(comment.text)
                                     Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
                                         .font(.caption2)
@@ -189,7 +238,22 @@ struct TipDetailView: View {
 
     func postComment() {
         guard let tipId = tip.id, !newCommentText.isEmpty else { return }
-        store.addComment(tipId: tipId, text: newCommentText)
+        store.addComment(
+            tipId: tipId,
+            text: newCommentText,
+            authorId: authManager.user?.id,
+            authorName: authManager.user?.displayName
+        )
         newCommentText = ""
+    }
+
+    func toggleLike() {
+        guard let tipId = tip.id, let userId = authManager.user?.id else { return }
+        store.toggleLike(tipId: tipId, userId: userId)
+    }
+
+    func toggleSave() {
+        guard let tipId = tip.id else { return }
+        Task { await authManager.toggleSavedTip(tipId) }
     }
 }

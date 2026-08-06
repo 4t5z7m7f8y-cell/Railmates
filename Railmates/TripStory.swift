@@ -31,6 +31,9 @@ struct TripStory: Identifiable, Codable, Hashable {
     var viewCount: Int = 0
     var likeCount: Int = 0
     var likedBy: [String] = []  // User IDs who liked
+
+    // Optional trip budget in EUR
+    var budget: Int? = nil
     
     // Computed properties
     var duration: String {

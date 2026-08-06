@@ -46,6 +46,28 @@ class TripStoryStore: ObservableObject {
             }
     }
     
+    func fetchStoriesByUsers(userIds: [String]) {
+        guard !userIds.isEmpty else {
+            stories = []
+            return
+        }
+        isLoading = true
+        let ids = Array(userIds.prefix(30)) // Firestore `in` limit
+        db.collection("tripStories")
+            .whereField("isPublic", isEqualTo: true)
+            .whereField("createdBy", in: ids)
+            .addSnapshotListener { snapshot, error in
+                self.isLoading = false
+                if let error = error {
+                    print("Error fetching following stories: \(error)")
+                    return
+                }
+                self.stories = (snapshot?.documents.compactMap { try? $0.data(as: TripStory.self) } ?? [])
+                    .sorted { $0.createdAt > $1.createdAt }
+                Task { await self.fetchAllCreatorNames() }
+            }
+    }
+
     func fetchMyStories(userId: String) {
         isLoading = true
         errorMessage = nil
@@ -161,6 +183,41 @@ class TripStoryStore: ObservableObject {
         }
     }
     
+    // MARK: - Comments
+
+    func fetchComments(storyId: String, completion: @escaping ([Comment]) -> Void) {
+        db.collection("tripStories").document(storyId).collection("comments")
+            .order(by: "createdAt", descending: false)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error fetching story comments: \(error)")
+                    completion([])
+                    return
+                }
+                let comments = snapshot?.documents.compactMap { doc in
+                    try? doc.data(as: Comment.self)
+                } ?? []
+                completion(comments)
+            }
+    }
+
+    func addComment(storyId: String, text: String, authorId: String, authorName: String) {
+        let comment = Comment(text: text, authorId: authorId, authorName: authorName)
+        do {
+            _ = try db.collection("tripStories").document(storyId).collection("comments").addDocument(from: comment)
+        } catch {
+            errorMessage = "Failed to add comment: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteComment(storyId: String, commentId: String) {
+        db.collection("tripStories").document(storyId).collection("comments").document(commentId).delete { error in
+            if let error = error {
+                print("Error deleting story comment: \(error)")
+            }
+        }
+    }
+
     // MARK: - Creator Names
     
     func fetchCreatorName(userId: String) async {

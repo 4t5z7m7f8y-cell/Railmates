@@ -19,6 +19,8 @@ struct EditTripStoryView: View {
     @State private var tripEnd: Date
     @State private var visitedPlaces: [PlaceVisited]
     @State private var isPublic: Bool
+    @State private var budgetEnabled: Bool
+    @State private var budget: Int
     @State private var isSaving = false
     
     // Place editing
@@ -42,6 +44,8 @@ struct EditTripStoryView: View {
         _tripEnd = State(initialValue: story.tripEnd)
         _visitedPlaces = State(initialValue: story.visitedPlaces)
         _isPublic = State(initialValue: story.isPublic)
+        _budgetEnabled = State(initialValue: story.budget != nil)
+        _budget = State(initialValue: story.budget ?? 500)
     }
     
     var isValid: Bool {
@@ -123,6 +127,18 @@ struct EditTripStoryView: View {
                         .foregroundColor(.secondary)
                 }
                 
+                Section {
+                    Toggle("Add total budget", isOn: $budgetEnabled)
+                    if budgetEnabled {
+                        Stepper("€\(budget)", value: $budget, in: 0...20000, step: 50)
+                    }
+                } header: {
+                    Text("Budget (optional)")
+                } footer: {
+                    Text("Total trip cost in EUR")
+                        .font(.caption)
+                }
+
                 Section {
                     Toggle(isOn: $isPublic) {
                         HStack {
@@ -214,6 +230,7 @@ struct EditTripStoryView: View {
         updatedStory.tripEnd = tripEnd
         updatedStory.visitedPlaces = visitedPlaces
         updatedStory.isPublic = isPublic
+        updatedStory.budget = budgetEnabled ? budget : nil
         
         onSave(updatedStory)
         isSaving = false

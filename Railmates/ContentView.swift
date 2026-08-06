@@ -13,8 +13,9 @@ struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingAddSheet = false
-    @State private var selectedRadius: Double = 0 // 0 means "All"
+    @State private var selectedRadius: Double = 0
     @State private var viewMode: ViewMode = .list
+    @State private var searchText = ""
 
     enum ViewMode: String, CaseIterable {
         case list = "List"
@@ -30,17 +31,24 @@ struct ContentView: View {
     ]
 
     var sortedTips: [LocationTip] {
-        guard let userLocation = locationManager.currentLocation else {
-            return store.tips
+        let base: [LocationTip]
+        if let userLocation = locationManager.currentLocation {
+            let sorted = store.tips.sorted {
+                $0.distance(from: userLocation) < $1.distance(from: userLocation)
+            }
+            base = selectedRadius == 0 ? sorted : sorted.filter {
+                $0.distance(from: userLocation) <= selectedRadius * 1000
+            }
+        } else {
+            base = store.tips
         }
-        let sorted = store.tips.sorted {
-            $0.distance(from: userLocation) < $1.distance(from: userLocation)
+        if searchText.isEmpty { return base }
+        return base.filter { tip in
+            tip.title.localizedCaseInsensitiveContains(searchText) ||
+            tip.locationName.localizedCaseInsensitiveContains(searchText) ||
+            tip.description.localizedCaseInsensitiveContains(searchText) ||
+            tip.category.localizedCaseInsensitiveContains(searchText)
         }
-        if selectedRadius == 0 {
-            return sorted
-        }
-        let radiusInMeters = selectedRadius * 1000
-        return sorted.filter { $0.distance(from: userLocation) <= radiusInMeters }
     }
 
     var body: some View {
@@ -49,43 +57,52 @@ struct ContentView: View {
                 if store.tips.isEmpty {
                     ContentUnavailableView(
                         "No Tips Yet",
-                        systemImage: "map.fill",
-                        description: Text("Tap + to add the first location tip for fellow interrailers")
+                        systemImage: "mappin.and.ellipse",
+                        description: Text("Be the first to share a location tip with fellow interrailers!")
                     )
                 } else if sortedTips.isEmpty {
                     ContentUnavailableView(
-                        "Nothing Nearby",
-                        systemImage: "location.slash",
-                        description: Text("Try a wider radius to see more tips")
+                        searchText.isEmpty ? "Nothing Nearby" : "No Results",
+                        systemImage: searchText.isEmpty ? "location.slash" : "magnifyingglass",
+                        description: Text(searchText.isEmpty ? "Try a wider radius" : "Try a different search term")
                     )
                 } else if viewMode == .list {
-                    List(sortedTips) { tip in
-                        NavigationLink {
-                            TipDetailView(tip: tip, store: store)
-                        } label: {
-                            TipRow(
-                                tip: tip,
-                                distanceText: locationManager.currentLocation.map {
-                                    formattedDistance(tip.distance(from: $0))
-                                }
-                            )
-                        }
-                        .swipeActions(edge: .trailing) {
-                            if tip.createdBy == authManager.user?.id, let tipId = tip.id {
-                                Button(role: .destructive) {
-                                    store.delete(tipId: tipId)
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(sortedTips) { tip in
+                                NavigationLink {
+                                    TipDetailView(tip: tip, store: store)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    TipCard(
+                                        tip: tip,
+                                        distanceText: locationManager.currentLocation.map {
+                                            formattedDistance(tip.distance(from: $0))
+                                        }
+                                    )
+                                    .appCard()
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    if tip.createdBy == authManager.user?.id, let tipId = tip.id {
+                                        Button(role: .destructive) {
+                                            store.delete(tipId: tipId)
+                                        } label: {
+                                            Label("Delete Tip", systemImage: "trash")
+                                        }
+                                    }
                                 }
                             }
                         }
+                        .padding()
                     }
-                    .listStyle(.plain)
+                    .background(Color(.systemGroupedBackground))
                 } else {
                     MapTipView(tips: sortedTips)
                 }
             }
-            .navigationTitle("Railmates")
+            .navigationTitle("Tips")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText, prompt: "Search by city, category...")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
@@ -96,6 +113,7 @@ struct ContentView: View {
                         }
                     } label: {
                         Label(currentRadiusLabel, systemImage: "slider.horizontal.3")
+                            .foregroundColor(.appGreen)
                     }
                 }
                 ToolbarItem(placement: .principal) {
@@ -113,6 +131,7 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .foregroundColor(.appGreen)
                     }
                 }
             }
@@ -133,16 +152,14 @@ struct ContentView: View {
     }
 
     func formattedDistance(_ meters: CLLocationDistance) -> String {
-        if meters < 1000 {
-            return "\(Int(meters)) m away"
-        } else {
-            let km = meters / 1000
-            return String(format: "%.1f km away", km)
-        }
+        meters < 1000
+            ? "\(Int(meters)) m away"
+            : String(format: "%.1f km away", meters / 1000)
     }
 }
 
-struct TipRow: View {
+// MARK: - Tip Card (card layout replacing TipRow)
+struct TipCard: View {
     let tip: LocationTip
     let distanceText: String?
 
@@ -160,66 +177,88 @@ struct TipRow: View {
 
     var categoryColor: Color {
         switch tip.category {
+        case "Food": return .appOchre
+        case "Station Tip": return .appBrown
+        case "Activity": return .appGreen
+        case "Sight": return Color(red: 0.20, green: 0.40, blue: 0.80)
         case "Hostel": return .indigo
         case "Hotel": return .purple
-        case "Food": return .orange
-        case "Activity": return .green
-        case "Sight": return .blue
-        case "Station Tip": return .red
-        default: return .gray
+        default: return .appGreen
         }
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(categoryColor.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Image(systemName: categoryIcon)
-                    .foregroundColor(categoryColor)
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            // Header row
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(categoryColor.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: categoryIcon)
+                        .foregroundColor(categoryColor)
+                        .font(.subheadline)
+                }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(tip.title)
-                    .font(.headline)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(tip.title)
+                        .font(.headline)
 
-                Text(tip.locationName)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Text(tip.description)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-
-                HStack(spacing: 4) {
-                    if tip.ratingCount > 0 {
-                        Image(systemName: "star.fill")
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin")
                             .font(.caption2)
-                            .foregroundColor(.yellow)
-                        Text(String(format: "%.1f", tip.averageRating))
+                            .foregroundColor(.secondary)
+                        Text(tip.locationName)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-
-                    if let distanceText {
-                        if tip.ratingCount > 0 {
-                            Text("•")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Text(distanceText)
-                            .font(.caption)
-                            .foregroundColor(categoryColor)
-                    }
                 }
-                .padding(.top, 2)
+
+                Spacer()
+
+                Text(tip.category)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(categoryColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(categoryColor.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+
+            // Description
+            Text(tip.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+
+            // Footer stats
+            HStack(spacing: 12) {
+                if tip.ratingCount > 0 {
+                    Label(String(format: "%.1f", tip.averageRating), systemImage: "star.fill")
+                        .font(.caption)
+                        .foregroundColor(.appOchre)
+                }
+                if tip.likeCount > 0 {
+                    Label("\(tip.likeCount)", systemImage: "heart.fill")
+                        .font(.caption)
+                        .foregroundColor(.pink.opacity(0.8))
+                }
+                Spacer()
+                if let distanceText {
+                    Text(distanceText)
+                        .font(.caption)
+                        .foregroundColor(categoryColor)
+                        .fontWeight(.medium)
+                }
             }
         }
-        .padding(.vertical, 8)
+        .padding(16)
     }
 }
+
+// Keep TipRow as an alias for use in HomeView/SavedView
+typealias TipRow = TipCard
 
 #Preview {
     ContentView()

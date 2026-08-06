@@ -29,6 +29,10 @@ struct CreateTripStoryView: View {
     @State private var newCity = ""
     @State private var newCountry = ""
     
+    // Budget
+    @State private var budgetEnabled = false
+    @State private var budget: Int = 500
+
     // Photos
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoData: [(data: Data, caption: String)] = []
@@ -185,6 +189,18 @@ struct CreateTripStoryView: View {
                 }
                 
                 Section {
+                    Toggle("Add total budget", isOn: $budgetEnabled)
+                    if budgetEnabled {
+                        Stepper("€\(budget)", value: $budget, in: 0...20000, step: 50)
+                    }
+                } header: {
+                    Text("Budget (optional)")
+                } footer: {
+                    Text("Total trip cost in EUR — helps others plan similar trips")
+                        .font(.caption)
+                }
+
+                Section {
                     Toggle(isOn: $isPublic) {
                         HStack {
                             Image(systemName: isPublic ? "globe" : "lock.fill")
@@ -192,7 +208,7 @@ struct CreateTripStoryView: View {
                             Text(isPublic ? "Public" : "Private")
                         }
                     }
-                    
+
                     Text(isPublic ? "Share your adventure with the world" : "Only you can see this story")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -303,7 +319,7 @@ struct CreateTripStoryView: View {
                 isSaving = false
                 return
             }
-            let newStory = TripStory(
+            var newStory = TripStory(
                 title: title,
                 story: story,
                 createdBy: userId,
@@ -313,6 +329,7 @@ struct CreateTripStoryView: View {
                 visitedPlaces: visitedPlaces,
                 photos: uploadedPhotos
             )
+            newStory.budget = budgetEnabled ? budget : nil
             onSave(newStory)
             isSaving = false
             dismiss()

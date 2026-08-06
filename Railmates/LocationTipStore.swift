@@ -59,8 +59,18 @@ class LocationTipStore: ObservableObject {
         ])
     }
 
-    func addComment(tipId: String, text: String) {
-        let comment = Comment(text: text)
+    func toggleLike(tipId: String, userId: String) {
+        let tipRef = db.collection("locationTips").document(tipId)
+        if let tip = tips.first(where: { $0.id == tipId }),
+           tip.likedBy.contains(userId) {
+            tipRef.updateData(["likedBy": FieldValue.arrayRemove([userId])])
+        } else {
+            tipRef.updateData(["likedBy": FieldValue.arrayUnion([userId])])
+        }
+    }
+
+    func addComment(tipId: String, text: String, authorId: String? = nil, authorName: String? = nil) {
+        let comment = Comment(text: text, authorId: authorId, authorName: authorName)
         do {
             _ = try db.collection("locationTips").document(tipId).collection("comments").addDocument(from: comment)
         } catch {

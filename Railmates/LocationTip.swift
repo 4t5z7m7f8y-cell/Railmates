@@ -17,6 +17,7 @@ struct LocationTip: Identifiable, Codable, Hashable {
     var latitude: Double
     var longitude: Double
     var createdAt: Date = Date()
+    var createdBy: String? = nil
     var ratingSum: Int = 0
     var ratingCount: Int = 0
 

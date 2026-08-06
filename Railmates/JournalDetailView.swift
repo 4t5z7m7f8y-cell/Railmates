@@ -120,7 +120,11 @@ struct JournalDetailView: View {
                             .font(.headline)
                         
                         ForEach(entries) { entry in
-                            JournalEntryCard(entry: entry)
+                            JournalEntryCard(entry: entry, onDelete: isOwner ? {
+                                if let entryId = entry.id {
+                                    store.deleteEntry(journalId: journal.id ?? "", entryId: entryId)
+                                }
+                            } : nil)
                         }
                     }
                 }
@@ -229,19 +233,28 @@ struct JournalDetailView: View {
 
 struct JournalEntryCard: View {
     let entry: JournalEntry
-    
+    var onDelete: (() -> Void)? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(entry.date.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 Label(entry.city, systemImage: "mappin.circle.fill")
                     .font(.caption)
                     .foregroundColor(.blue)
+
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .padding(.leading, 8)
+                }
             }
             
             Text(entry.title)

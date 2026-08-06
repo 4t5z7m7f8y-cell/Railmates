@@ -11,6 +11,7 @@ import CoreLocation
 struct ContentView: View {
     @StateObject private var store = LocationTipStore()
     @StateObject private var locationManager = LocationManager()
+    @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingAddSheet = false
     @State private var selectedRadius: Double = 0 // 0 means "All"
     @State private var viewMode: ViewMode = .list
@@ -69,6 +70,15 @@ struct ContentView: View {
                                 }
                             )
                         }
+                        .swipeActions(edge: .trailing) {
+                            if tip.createdBy == authManager.user?.id, let tipId = tip.id {
+                                Button(role: .destructive) {
+                                    store.delete(tipId: tipId)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                     .listStyle(.plain)
                 } else {
@@ -107,7 +117,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showingAddSheet) {
-                AddLocationTipView { newTip in
+                AddLocationTipView(userId: authManager.user?.id) { newTip in
                     store.add(newTip)
                 }
             }

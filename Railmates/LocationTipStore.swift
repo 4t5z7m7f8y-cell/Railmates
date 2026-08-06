@@ -35,6 +35,22 @@ class LocationTipStore: ObservableObject {
         }
     }
 
+    func delete(tipId: String) {
+        db.collection("locationTips").document(tipId).delete { error in
+            if let error = error {
+                print("Error deleting tip: \(error)")
+            }
+        }
+    }
+
+    func deleteComment(tipId: String, commentId: String) {
+        db.collection("locationTips").document(tipId).collection("comments").document(commentId).delete { error in
+            if let error = error {
+                print("Error deleting comment: \(error)")
+            }
+        }
+    }
+
     func addRating(tipId: String, rating: Int) {
         let tipRef = db.collection("locationTips").document(tipId)
         tipRef.updateData([

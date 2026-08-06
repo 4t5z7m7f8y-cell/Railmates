@@ -10,6 +10,7 @@ import CoreLocation
 
 struct AddLocationTipView: View {
     @Environment(\.dismiss) private var dismiss
+    var userId: String?
     var onSave: (LocationTip) -> Void
 
     @State private var title = ""
@@ -83,7 +84,8 @@ struct AddLocationTipView: View {
                     description: description,
                     locationName: locationName,
                     latitude: coordinate?.latitude ?? 0,
-                    longitude: coordinate?.longitude ?? 0
+                    longitude: coordinate?.longitude ?? 0,
+                    createdBy: userId
                 )
 
                 if category == "Station Tip", !stationName.isEmpty {

@@ -9,10 +9,17 @@ import SwiftUI
 struct TipDetailView: View {
     let tip: LocationTip
     @ObservedObject var store: LocationTipStore
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authManager: AuthenticationManager
 
     @State private var comments: [Comment] = []
     @State private var newCommentText = ""
     @State private var selectedRating = 0
+    @State private var showingDeleteAlert = false
+
+    var isOwner: Bool {
+        tip.createdBy != nil && tip.createdBy == authManager.user?.id
+    }
 
     var body: some View {
         ScrollView {
@@ -35,7 +42,7 @@ struct TipDetailView: View {
                         .padding(.vertical, 2)
                         .background(Color.blue.opacity(0.15))
                         .clipShape(Capsule())
-                    
+
                     // Category-specific fields
                     if let stationName = tip.stationName, !stationName.isEmpty {
                         Label(stationName, systemImage: "train.side.front.car")
@@ -43,14 +50,14 @@ struct TipDetailView: View {
                             .foregroundColor(.red)
                             .padding(.top, 4)
                     }
-                    
+
                     if let hasStorage = tip.hasLuggageStorage, hasStorage {
                         Label("Luggage storage available", systemImage: "suitcase.fill")
                             .font(.subheadline)
                             .foregroundColor(.green)
                             .padding(.top, 4)
                     }
-                    
+
                     if let info = tip.practicalInfo, !info.isEmpty {
                         HStack(alignment: .top, spacing: 6) {
                             Text("💡")
@@ -118,11 +125,23 @@ struct TipDetailView: View {
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(comments) { comment in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(comment.text)
-                                Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(comment.text)
+                                    Text(comment.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                if isOwner, let tipId = tip.id, let commentId = comment.id {
+                                    Spacer()
+                                    Button {
+                                        store.deleteComment(tipId: tipId, commentId: commentId)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                }
                             }
                             .padding(.vertical, 4)
                             Divider()
@@ -134,6 +153,28 @@ struct TipDetailView: View {
         }
         .navigationTitle("Tip Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isOwner {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(role: .destructive) {
+                        showingDeleteAlert = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                }
+            }
+        }
+        .alert("Delete Tip", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if let tipId = tip.id {
+                    store.delete(tipId: tipId)
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this tip? This can't be undone.")
+        }
         .onAppear {
             loadComments()
         }

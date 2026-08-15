@@ -17,5 +17,6 @@ struct User: Identifiable, Codable {
     var notificationToken: String? = nil
     var savedTipIds: [String]? = nil
     var savedStoryIds: [String]? = nil
+    var savedGuideIds: [String]? = nil
     var following: [String]? = nil  // user IDs this user follows
 }

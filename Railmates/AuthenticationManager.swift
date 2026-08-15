@@ -197,6 +197,24 @@ class AuthenticationManager: ObservableObject {
         }
     }
 
+    func toggleSavedGuide(_ guideId: String) async {
+        guard let userId = user?.id else { return }
+        let alreadySaved = user?.savedGuideIds?.contains(guideId) ?? false
+        do {
+            try await db.collection("users").document(userId).updateData([
+                "savedGuideIds": alreadySaved ? FieldValue.arrayRemove([guideId]) : FieldValue.arrayUnion([guideId])
+            ])
+            if alreadySaved {
+                user?.savedGuideIds?.removeAll { $0 == guideId }
+            } else {
+                if user?.savedGuideIds == nil { user?.savedGuideIds = [] }
+                user?.savedGuideIds?.append(guideId)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Following
 
     func toggleFollow(userId targetId: String) async {

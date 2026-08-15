@@ -34,6 +34,7 @@ struct TripsView: View {
     @State private var showingCreateStory = false
     @State private var showingCreateJournal = false
     @State private var showingCreateTrip = false
+    @State private var showingTripStats = false
     @State private var showMyContentOnly = false
     @State private var searchText = ""
     @State private var selectedCountry: String? = nil
@@ -150,6 +151,14 @@ struct TripsView: View {
                             .foregroundColor(.appGreen)
                     }
                 }
+                if selectedSegment == 2 {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button { showingTripStats = true } label: {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundColor(.appGreen)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         if selectedSegment == 0 { showingCreateStory = true }
@@ -175,6 +184,9 @@ struct TripsView: View {
                         journalStore.create(newJournal)
                     }
                 }
+            }
+            .sheet(isPresented: $showingTripStats) {
+                TripStatsView(trips: tripStore.trips)
             }
             .onAppear { loadContent() }
             .onChange(of: showMyContentOnly) { _, _ in loadContent() }

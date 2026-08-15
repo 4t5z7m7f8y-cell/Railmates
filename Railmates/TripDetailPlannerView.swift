@@ -6,12 +6,15 @@ struct TripDetailPlannerView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @Environment(\.dismiss) private var dismiss
 
-    @State private var showingAddStop = false
+    @State private var showingAddStop      = false
     @State private var editingStop: TripStop?
-    @State private var showingDeleteAlert = false
-    @State private var showingPublish = false
-    @State private var showingRenameAlert = false
-    @State private var editedTitle = ""
+    @State private var showingDeleteAlert  = false
+    @State private var showingPublish      = false
+    @State private var showingRenameAlert  = false
+    @State private var editedTitle         = ""
+    @State private var showingAddExpense   = false
+    @State private var showingEditBudget   = false
+    @State private var showingBudgetStats  = false
 
     var currentTrip: Trip {
         tripStore.trips.first(where: { $0.id == trip.id }) ?? trip
@@ -37,6 +40,9 @@ struct TripDetailPlannerView: View {
 
                 addStopButton
                     .padding(.horizontal)
+
+                budgetSection
+                    .padding(.horizontal)
                     .padding(.bottom)
             }
             .padding(.top)
@@ -45,6 +51,14 @@ struct TripDetailPlannerView: View {
         .navigationTitle(currentTrip.title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingBudgetStats = true
+                } label: {
+                    Image(systemName: "chart.bar.fill")
+                        .foregroundColor(.appGreen)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -102,6 +116,25 @@ struct TripDetailPlannerView: View {
             TripPublishView(trip: currentTrip) {
                 var updated = currentTrip
                 updated.isPublished = true
+                tripStore.update(updated)
+            }
+        }
+        // Budget stats sheet
+        .sheet(isPresented: $showingBudgetStats) {
+            TripBudgetStatsView(trip: currentTrip)
+        }
+        // Budget sheets
+        .sheet(isPresented: $showingAddExpense) {
+            AddExpenseView { expense in
+                var updated = currentTrip
+                updated.expenses.append(expense)
+                tripStore.update(updated)
+            }
+        }
+        .sheet(isPresented: $showingEditBudget) {
+            EditBudgetView(existing: currentTrip.plannedBudget) { newBudget in
+                var updated = currentTrip
+                updated.plannedBudget = newBudget
                 tripStore.update(updated)
             }
         }
@@ -345,6 +378,147 @@ struct TripDetailPlannerView: View {
                 .padding()
                 .background(Color.appGreen)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+    }
+
+    // MARK: - Budget Section
+
+    @ViewBuilder
+    var budgetSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                Text("Budget")
+                    .font(.headline)
+                Spacer()
+                Button { showingEditBudget = true } label: {
+                    Label("Plan", systemImage: "slider.horizontal.3")
+                        .font(.caption)
+                        .foregroundColor(.appGreen)
+                }
+                Button { showingAddExpense = true } label: {
+                    Label("Expense", systemImage: "plus")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.appGreen)
+                        .clipShape(Capsule())
+                }
+            }
+
+            let hasBudget = currentTrip.totalPlanned > 0 || !currentTrip.expenses.isEmpty
+
+            if hasBudget {
+                // Totals summary
+                let planned = currentTrip.totalPlanned
+                let actual  = currentTrip.totalActual
+                let over    = actual > planned && planned > 0
+
+                HStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Planned").font(.caption).foregroundColor(.secondary)
+                        Text(planned > 0 ? "€\(Int(planned))" : "—")
+                            .font(.title3).fontWeight(.semibold)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Spent").font(.caption).foregroundColor(.secondary)
+                        Text("€\(Int(actual))")
+                            .font(.title3).fontWeight(.semibold)
+                            .foregroundColor(over ? .red : .primary)
+                    }
+                    if planned > 0 {
+                        Spacer()
+                        let diff = actual - planned
+                        Text(diff > 0 ? "+€\(Int(diff)) over" : "€\(Int(-diff)) left")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundColor(diff > 0 ? .red : .appGreen)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background((diff > 0 ? Color.red : Color.appGreen).opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                // Per-category breakdown
+                ForEach(BudgetCategory.allCases, id: \.self) { cat in
+                    let p = currentTrip.planned(for: cat)
+                    let a = currentTrip.actual(for: cat)
+                    if p > 0 || a > 0 {
+                        categoryRow(cat: cat, planned: p, actual: a)
+                    }
+                }
+
+                // Expenses list
+                if !currentTrip.expenses.isEmpty {
+                    Divider()
+                    Text("Expenses")
+                        .font(.subheadline).fontWeight(.semibold)
+                    ForEach(currentTrip.expenses.sorted { $0.date > $1.date }) { expense in
+                        HStack(spacing: 10) {
+                            Image(systemName: expense.category.icon)
+                                .foregroundColor(expense.category.color)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(expense.note.isEmpty ? expense.category.rawValue : expense.note)
+                                    .font(.subheadline)
+                                Text(expense.date.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.caption2).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Text("€\(String(format: "%.0f", expense.amount))")
+                                .font(.subheadline).fontWeight(.medium)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            } else {
+                // Empty state
+                VStack(spacing: 8) {
+                    Text("No budget set yet")
+                        .font(.subheadline).foregroundColor(.secondary)
+                    Button("Plan Budget") { showingEditBudget = true }
+                        .font(.subheadline).foregroundColor(.appGreen)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    func categoryRow(cat: BudgetCategory, planned: Double, actual: Double) -> some View {
+        let over = actual > planned && planned > 0
+        let progress = planned > 0 ? min(actual / planned, 1.0) : 0
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label(cat.rawValue, systemImage: cat.icon)
+                    .font(.caption).foregroundColor(cat.color)
+                Spacer()
+                if planned > 0 {
+                    Text("€\(Int(actual)) / €\(Int(planned))")
+                        .font(.caption).foregroundColor(over ? .red : .secondary)
+                } else {
+                    Text("€\(Int(actual))")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+            }
+            if planned > 0 {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color(.systemFill))
+                            .frame(height: 6)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(over ? Color.red : cat.color)
+                            .frame(width: geo.size.width * progress, height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
         }
     }
 

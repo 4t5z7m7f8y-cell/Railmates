@@ -13,6 +13,8 @@ struct Guide: Identifiable, Codable, Hashable {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
     var likedBy: [String] = []
+    var latitude: Double? = nil
+    var longitude: Double? = nil
 
     var likeCount: Int { likedBy.count }
 

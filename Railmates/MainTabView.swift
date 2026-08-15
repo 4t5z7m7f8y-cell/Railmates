@@ -12,29 +12,14 @@ struct MainTabView: View {
 
     var body: some View {
         TabView {
-            HomeView()
+            ExploreView()
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
-
-            ContentView()
-                .tabItem {
-                    Label("Tips", systemImage: "mappin.and.ellipse")
+                    Label("Explore", systemImage: "map")
                 }
 
             TripsView()
                 .tabItem {
-                    Label("Trips", systemImage: "train.side.front.car")
-                }
-
-            GuidesListView()
-                .tabItem {
-                    Label("Guides", systemImage: "book.fill")
-                }
-
-            HappeningsListView()
-                .tabItem {
-                    Label("Events", systemImage: "calendar")
+                    Label("My Trips", systemImage: "train.side.front.car")
                 }
 
             ProfileView()

@@ -13,6 +13,8 @@ struct ProfileView: View {
     @State private var newDisplayName = ""
     @State private var newCityName = ""
     @State private var showingAddCity = false
+    @State private var isSeeding = false
+    @State private var seedDone = false
     
     var body: some View {
         NavigationStack {
@@ -119,6 +121,34 @@ struct ProfileView: View {
                     } label: {
                         Label("Sign Out", systemImage: "arrow.right.circle.fill")
                     }
+                }
+
+                // Developer Section
+                Section {
+                    Button {
+                        isSeeding = true
+                        Task {
+                            await SeedDataManager.shared.seedAll()
+                            isSeeding = false
+                            seedDone = true
+                        }
+                    } label: {
+                        HStack {
+                            Label("Seed Sample Data", systemImage: "wand.and.stars")
+                            Spacer()
+                            if isSeeding {
+                                ProgressView()
+                            } else if seedDone {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
+                    .disabled(isSeeding)
+                } header: {
+                    Text("Developer")
+                } footer: {
+                    Text("Populates Firestore with sample tips, guides, and stories from fake users.")
                 }
             }
             .navigationTitle("Profile")

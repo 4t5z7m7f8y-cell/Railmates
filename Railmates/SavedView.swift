@@ -10,33 +10,35 @@ import FirebaseFirestore
 
 struct SavedView: View {
     @EnvironmentObject var authManager: AuthenticationManager
-    @StateObject private var tipStore = LocationTipStore()
+    @StateObject private var tipStore   = LocationTipStore()
+    @StateObject private var guideStore = GuideStore()
     @StateObject private var storyStore = TripStoryStore()
-    @State private var savedTips: [LocationTip] = []
-    @State private var savedStories: [TripStory] = []
-    @State private var isLoadingTips = false
-    @State private var isLoadingStories = false
+
+    @State private var savedTips:    [LocationTip] = []
+    @State private var savedGuides:  [Guide]       = []
+    @State private var savedStories: [TripStory]   = []
+    @State private var isLoading = false
 
     private let db = Firestore.firestore()
+
+    var isEmpty: Bool {
+        savedTips.isEmpty && savedGuides.isEmpty && savedStories.isEmpty && !isLoading
+    }
 
     var body: some View {
         NavigationStack {
             Group {
-                if savedTips.isEmpty && savedStories.isEmpty && !isLoadingTips && !isLoadingStories {
+                if isEmpty {
                     ContentUnavailableView {
                         Label("No Saved Items", systemImage: "bookmark")
                     } description: {
-                        Text("Tap the bookmark icon on any tip or story to save it here.")
+                        Text("Tap the bookmark icon on any tip or guide to save it here.")
                     }
                 } else {
                     List {
-                        if isLoadingTips || isLoadingStories {
+                        if isLoading {
                             Section {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                    Spacer()
-                                }
+                                HStack { Spacer(); ProgressView(); Spacer() }
                             }
                         }
 
@@ -47,6 +49,18 @@ struct SavedView: View {
                                         TipDetailView(tip: tip, store: tipStore)
                                     } label: {
                                         TipRow(tip: tip, distanceText: nil)
+                                    }
+                                }
+                            }
+                        }
+
+                        if !savedGuides.isEmpty {
+                            Section("Saved Guides") {
+                                ForEach(savedGuides) { guide in
+                                    NavigationLink {
+                                        GuideDetailView(guide: guide, store: guideStore)
+                                    } label: {
+                                        GuideCard(guide: guide)
                                     }
                                 }
                             }
@@ -70,58 +84,53 @@ struct SavedView: View {
                 }
             }
             .navigationTitle("Saved")
-            .onAppear {
-                loadSavedItems()
-            }
-            .onChange(of: authManager.user?.savedTipIds) { _, _ in
-                loadSavedItems()
-            }
-            .onChange(of: authManager.user?.savedStoryIds) { _, _ in
-                loadSavedItems()
-            }
+            .onAppear { loadAll() }
+            .onChange(of: authManager.user?.savedTipIds)   { _, _ in loadAll() }
+            .onChange(of: authManager.user?.savedGuideIds) { _, _ in loadAll() }
+            .onChange(of: authManager.user?.savedStoryIds) { _, _ in loadAll() }
         }
     }
 
-    func loadSavedItems() {
+    private func loadAll() {
         loadSavedTips()
+        loadSavedGuides()
         loadSavedStories()
     }
 
-    func loadSavedTips() {
-        let ids = authManager.user?.savedTipIds ?? [] as [String]
-        guard !ids.isEmpty else {
-            savedTips = []
-            return
-        }
-        isLoadingTips = true
+    private func loadSavedTips() {
+        let ids = authManager.user?.savedTipIds ?? []
+        guard !ids.isEmpty else { savedTips = []; return }
+        isLoading = true
         db.collection("locationTips")
             .whereField(FieldPath.documentID(), in: ids)
-            .getDocuments { snapshot, error in
-                isLoadingTips = false
-                if let error = error {
-                    print("Error loading saved tips: \(error)")
-                    return
-                }
+            .getDocuments { snapshot, _ in
+                isLoading = false
                 savedTips = snapshot?.documents.compactMap { try? $0.data(as: LocationTip.self) } ?? []
                 tipStore.tips = savedTips
             }
     }
 
-    func loadSavedStories() {
-        let ids = authManager.user?.savedStoryIds ?? [] as [String]
-        guard !ids.isEmpty else {
-            savedStories = []
-            return
-        }
-        isLoadingStories = true
+    private func loadSavedGuides() {
+        let ids = authManager.user?.savedGuideIds ?? []
+        guard !ids.isEmpty else { savedGuides = []; return }
+        isLoading = true
+        db.collection("guides")
+            .whereField(FieldPath.documentID(), in: ids)
+            .getDocuments { snapshot, _ in
+                isLoading = false
+                savedGuides = snapshot?.documents.compactMap { try? $0.data(as: Guide.self) } ?? []
+                guideStore.guides = savedGuides
+            }
+    }
+
+    private func loadSavedStories() {
+        let ids = authManager.user?.savedStoryIds ?? []
+        guard !ids.isEmpty else { savedStories = []; return }
+        isLoading = true
         db.collection("tripStories")
             .whereField(FieldPath.documentID(), in: ids)
-            .getDocuments { snapshot, error in
-                isLoadingStories = false
-                if let error = error {
-                    print("Error loading saved stories: \(error)")
-                    return
-                }
+            .getDocuments { snapshot, _ in
+                isLoading = false
                 savedStories = snapshot?.documents.compactMap { try? $0.data(as: TripStory.self) } ?? []
                 storyStore.stories = savedStories
                 Task { await storyStore.fetchAllCreatorNames() }

@@ -1,5 +1,42 @@
 import Foundation
+import SwiftUI
 import FirebaseFirestore
+
+enum BudgetCategory: String, Codable, CaseIterable {
+    case transport     = "Transport"
+    case accommodation = "Accommodation"
+    case food          = "Food"
+    case activities    = "Activities"
+    case other         = "Other"
+
+    var icon: String {
+        switch self {
+        case .transport:     return "train.side.front.car"
+        case .accommodation: return "bed.double.fill"
+        case .food:          return "fork.knife"
+        case .activities:    return "figure.walk"
+        case .other:         return "ellipsis.circle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .transport:     return .blue
+        case .accommodation: return .indigo
+        case .food:          return .orange
+        case .activities:    return .green
+        case .other:         return .gray
+        }
+    }
+}
+
+struct TripExpense: Codable, Identifiable {
+    var id: String = UUID().uuidString
+    var date: Date  = Date()
+    var amount: Double
+    var category: BudgetCategory
+    var note: String = ""
+}
 
 enum TransportType: String, Codable, CaseIterable {
     case train = "Train"
@@ -63,9 +100,22 @@ struct Trip: Identifiable, Codable {
     var isPublished: Bool = false
     var publishedStoryId: String? = nil
     var clonedFromStoryId: String? = nil
+    var plannedBudget: [String: Double] = [:]
+    var expenses: [TripExpense] = []
 
     var computedTotalBudget: Int {
         stops.compactMap { $0.budgetEUR }.reduce(0, +)
+    }
+
+    var totalPlanned: Double { plannedBudget.values.reduce(0, +) }
+    var totalActual: Double  { expenses.map(\.amount).reduce(0, +) }
+
+    func planned(for category: BudgetCategory) -> Double {
+        plannedBudget[category.rawValue] ?? 0
+    }
+
+    func actual(for category: BudgetCategory) -> Double {
+        expenses.filter { $0.category == category }.map(\.amount).reduce(0, +)
     }
 
     var dateRange: String {

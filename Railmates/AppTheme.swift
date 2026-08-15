@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 extension Color {
     static let appGreen  = Color(red: 0.176, green: 0.431, blue: 0.294) // forest green #2D6E4B
@@ -23,4 +24,12 @@ struct AppCardModifier: ViewModifier {
 
 extension View {
     func appCard() -> some View { modifier(AppCardModifier()) }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

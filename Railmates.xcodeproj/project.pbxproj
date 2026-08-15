@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9E04C09B30306C5E00758678 /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E04C09A30306C5E00758678 /* ExploreView.swift */; };
+		9E04C09D30306F2700758678 /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E04C09C30306F2700758678 /* AddExpenseView.swift */; };
+		9E04C09F30306F2E00758678 /* EditBudgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E04C09E30306F2E00758678 /* EditBudgetView.swift */; };
+		9E04C0A13030702000758678 /* TripBudgetStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E04C0A03030702000758678 /* TripBudgetStatsView.swift */; };
+		9E04C0A33030703D00758678 /* TripStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E04C0A23030703D00758678 /* TripStatsView.swift */; };
 		9E1BB932301FE69E00534F06 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9E1BB931301FE69E00534F06 /* FirebaseAuth */; };
 		9E1BB938301FE92B00534F06 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 9E1BB937301FE92B00534F06 /* FirebaseMessaging */; };
 		9E4386AE301FBC4000C74546 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 9E4386AD301FBC4000C74546 /* FirebaseFirestore */; };
@@ -16,6 +21,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9E04C09A30306C5E00758678 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
+		9E04C09C30306F2700758678 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
+		9E04C09E30306F2E00758678 /* EditBudgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditBudgetView.swift; sourceTree = "<group>"; };
+		9E04C0A03030702000758678 /* TripBudgetStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripBudgetStatsView.swift; sourceTree = "<group>"; };
+		9E04C0A23030703D00758678 /* TripStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripStatsView.swift; sourceTree = "<group>"; };
 		9E43869C301FB3A700C74546 /* Railmates.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Railmates.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EB00A15301FC4D0006C28EC /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		9EB00A17301FC50B006C28EC /* GeocodingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeocodingHelper.swift; sourceTree = "<group>"; };
@@ -59,6 +69,11 @@
 				9E43869E301FB3A700C74546 /* Railmates */,
 				9E1BB930301FE69E00534F06 /* Frameworks */,
 				9E43869D301FB3A700C74546 /* Products */,
+				9E04C09A30306C5E00758678 /* ExploreView.swift */,
+				9E04C09C30306F2700758678 /* AddExpenseView.swift */,
+				9E04C09E30306F2E00758678 /* EditBudgetView.swift */,
+				9E04C0A03030702000758678 /* TripBudgetStatsView.swift */,
+				9E04C0A23030703D00758678 /* TripStatsView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -153,6 +168,11 @@
 			files = (
 				9EB00A18301FC50B006C28EC /* GeocodingHelper.swift in Sources */,
 				9EB00A16301FC4D0006C28EC /* LocationManager.swift in Sources */,
+				9E04C0A13030702000758678 /* TripBudgetStatsView.swift in Sources */,
+				9E04C09B30306C5E00758678 /* ExploreView.swift in Sources */,
+				9E04C09F30306F2E00758678 /* EditBudgetView.swift in Sources */,
+				9E04C0A33030703D00758678 /* TripStatsView.swift in Sources */,
+				9E04C09D30306F2700758678 /* AddExpenseView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

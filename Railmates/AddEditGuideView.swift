@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct AddEditGuideView: View {
     @Environment(\.dismiss) private var dismiss
@@ -92,12 +93,24 @@ struct AddEditGuideView: View {
             createdBy: authManager.user?.id,
             authorName: authManager.user?.displayName ?? ""
         )
-        guide.title = title.trimmingCharacters(in: .whitespaces)
-        guide.content = content.trimmingCharacters(in: .whitespaces)
+        guide.title    = title.trimmingCharacters(in: .whitespaces)
+        guide.content  = content.trimmingCharacters(in: .whitespaces)
         guide.category = category
-        guide.country = country.trimmingCharacters(in: .whitespaces)
+        guide.country  = country.trimmingCharacters(in: .whitespaces)
         guide.updatedAt = Date()
-        onSave(guide)
+
+        let trimmedCountry = guide.country
+        if !trimmedCountry.isEmpty {
+            CLGeocoder().geocodeAddressString(trimmedCountry) { placemarks, _ in
+                if let loc = placemarks?.first?.location {
+                    guide.latitude  = loc.coordinate.latitude
+                    guide.longitude = loc.coordinate.longitude
+                }
+                onSave(guide)
+            }
+        } else {
+            onSave(guide)
+        }
         dismiss()
     }
 }

@@ -24,6 +24,11 @@ struct GuideDetailView: View {
         return currentGuide.likedBy.contains(userId)
     }
 
+    var isSaved: Bool {
+        guard let guideId = guide.id else { return false }
+        return authManager.user?.savedGuideIds?.contains(guideId) ?? false
+    }
+
     private var color: Color { Guide.categoryColor(guide.category) }
     private var icon: String  { Guide.categoryIcon(guide.category) }
 
@@ -83,22 +88,38 @@ struct GuideDetailView: View {
 
                 Divider()
 
-                // Like button
-                Button {
-                    toggleLike()
-                } label: {
-                    Label(
-                        isLiked
-                            ? (currentGuide.likeCount > 0 ? "\(currentGuide.likeCount) Liked" : "Liked")
-                            : (currentGuide.likeCount > 0 ? "\(currentGuide.likeCount) Likes" : "Like this guide"),
-                        systemImage: isLiked ? "heart.fill" : "heart"
-                    )
-                    .font(.subheadline)
-                    .foregroundColor(isLiked ? .red : .secondary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .background(isLiked ? Color.red.opacity(0.1) : Color(.secondarySystemBackground))
-                    .clipShape(Capsule())
+                // Like + save action bar
+                HStack(spacing: 12) {
+                    Button {
+                        toggleLike()
+                    } label: {
+                        Label(
+                            isLiked
+                                ? (currentGuide.likeCount > 0 ? "\(currentGuide.likeCount) Liked" : "Liked")
+                                : (currentGuide.likeCount > 0 ? "\(currentGuide.likeCount) Likes" : "Like"),
+                            systemImage: isLiked ? "heart.fill" : "heart"
+                        )
+                        .font(.subheadline)
+                        .foregroundColor(isLiked ? .red : .secondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(isLiked ? Color.red.opacity(0.1) : Color.gray.opacity(0.1))
+                        .clipShape(Capsule())
+                    }
+
+                    Button {
+                        Task { await authManager.toggleSavedGuide(guide.id ?? "") }
+                    } label: {
+                        Label(isSaved ? "Saved" : "Save", systemImage: isSaved ? "bookmark.fill" : "bookmark")
+                            .font(.subheadline)
+                            .foregroundColor(isSaved ? .blue : .secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(isSaved ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer()
                 }
 
                 Divider()

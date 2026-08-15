@@ -20,6 +20,13 @@ struct TripStoryDetailView: View {
     @State private var comments: [Comment] = []
     @State private var newCommentText = ""
 
+    // Clone as Trip
+    @StateObject private var cloneTripStore = TripStore()
+    @State private var showingCloneAlert = false
+    @State private var cloneTitle = ""
+    @State private var showingClonedTrip = false
+    @State private var clonedTrip: Trip?
+
     // Live version from store so likes update reactively without re-navigation
     var currentStory: TripStory {
         store.stories.first(where: { $0.id == story.id }) ?? story
@@ -249,6 +256,24 @@ struct TripStoryDetailView: View {
                 }
                 .padding(.horizontal)
 
+                // Clone as Trip button
+                if !currentStory.visitedPlaces.isEmpty {
+                    Button {
+                        cloneTitle = currentStory.title + " (Plan)"
+                        showingCloneAlert = true
+                    } label: {
+                        Label("Clone as Trip Plan", systemImage: "doc.on.doc")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.appGreen)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.appGreen.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal)
+                }
+
                 Divider()
 
                 // Comments section
@@ -345,6 +370,20 @@ struct TripStoryDetailView: View {
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [createShareText()])
         }
+        .sheet(isPresented: $showingClonedTrip) {
+            if let cloned = clonedTrip {
+                NavigationStack {
+                    TripDetailPlannerView(trip: cloned, tripStore: cloneTripStore)
+                }
+            }
+        }
+        .alert("Clone as Trip Plan", isPresented: $showingCloneAlert) {
+            TextField("Trip title", text: $cloneTitle)
+            Button("Cancel", role: .cancel) { cloneTitle = "" }
+            Button("Clone") { cloneTrip() }
+        } message: {
+            Text("Creates a new private itinerary based on this story's route. You can then add dates, budgets, and notes.")
+        }
         .alert("Delete Story", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -389,6 +428,35 @@ struct TripStoryDetailView: View {
               !newCommentText.isEmpty else { return }
         store.addComment(storyId: storyId, text: newCommentText, authorId: userId, authorName: userName)
         newCommentText = ""
+    }
+
+    func cloneTrip() {
+        guard let userId = authManager.user?.id else { return }
+        let stops: [TripStop] = story.visitedPlaces
+            .sorted { $0.order < $1.order }
+            .enumerated()
+            .map { i, place in
+                TripStop(
+                    city: place.city ?? place.country,
+                    country: place.country,
+                    order: i
+                )
+            }
+        var newTrip = Trip(
+            title: cloneTitle.trimmingCharacters(in: .whitespaces),
+            createdBy: userId,
+            stops: stops,
+            clonedFromStoryId: story.id
+        )
+        cloneTitle = ""
+        Task {
+            if let docId = await cloneTripStore.create(newTrip) {
+                newTrip.id = docId
+                cloneTripStore.fetchMyTrips(userId: userId)
+                clonedTrip = newTrip
+                showingClonedTrip = true
+            }
+        }
     }
 
     func createShareText() -> String {

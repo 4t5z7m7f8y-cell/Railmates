@@ -12,21 +12,41 @@ enum DurationFilter: String, CaseIterable {
     case long = "15+ days"
 }
 
+enum BudgetFilter: String, CaseIterable {
+    case any   = "Any budget"
+    case low   = "Under €500"
+    case mid   = "€500–1000"
+    case high  = "€1000+"
+}
+
+enum StorySortOrder: String, CaseIterable {
+    case recent   = "Most Recent"
+    case trending = "Trending"
+}
+
 struct TripsView: View {
     @EnvironmentObject var authManager: AuthenticationManager
     @StateObject private var storyStore = TripStoryStore()
     @StateObject private var journalStore = JournalStore()
+    @StateObject private var tripStore = TripStore()
 
     @State private var selectedSegment = 0
     @State private var showingCreateStory = false
     @State private var showingCreateJournal = false
+    @State private var showingCreateTrip = false
     @State private var showMyContentOnly = false
     @State private var searchText = ""
     @State private var selectedCountry: String? = nil
     @State private var selectedDuration: DurationFilter = .all
+    @State private var selectedBudget: BudgetFilter = .any
+    @State private var storySortOrder: StorySortOrder = .recent
 
     var availableCountries: [String] {
         Array(Set(storyStore.stories.flatMap { $0.countriesVisited })).sorted()
+    }
+
+    var hasActiveFilter: Bool {
+        selectedCountry != nil || selectedDuration != .all || selectedBudget != .any
     }
 
     var filteredStories: [TripStory] {
@@ -54,6 +74,18 @@ struct TripsView: View {
         case .all: break
         }
 
+        switch selectedBudget {
+        case .any:  break
+        case .low:  base = base.filter { ($0.budget ?? -1) >= 0 && ($0.budget ?? Int.max) < 500 }
+        case .mid:  base = base.filter { let b = $0.budget ?? -1; return b >= 500 && b <= 1000 }
+        case .high: base = base.filter { ($0.budget ?? -1) > 1000 }
+        }
+
+        switch storySortOrder {
+        case .recent:   break
+        case .trending: base = base.sorted { ($0.likeCount * 3 + $0.viewCount) > ($1.likeCount * 3 + $1.viewCount) }
+        }
+
         return base
     }
 
@@ -78,6 +110,7 @@ struct TripsView: View {
                 Picker("", selection: $selectedSegment) {
                     Text("Stories").tag(0)
                     Text("Journals").tag(1)
+                    Text("Planner").tag(2)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
@@ -87,8 +120,10 @@ struct TripsView: View {
                 if selectedSegment == 0 {
                     storyFilterBar
                     storiesContent
-                } else {
+                } else if selectedSegment == 1 {
                     journalsContent
+                } else {
+                    TripPlannerView(tripStore: tripStore, createTrigger: $showingCreateTrip)
                 }
             }
             .background(Color(.systemGroupedBackground))
@@ -99,15 +134,27 @@ struct TripsView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
                         Toggle("My Content Only", isOn: $showMyContentOnly)
+                        if selectedSegment == 0 {
+                            Divider()
+                            Picker("Sort", selection: $storySortOrder) {
+                                ForEach(StorySortOrder.allCases, id: \.self) { order in
+                                    Label(order.rawValue, systemImage: order == .trending ? "flame" : "clock")
+                                        .tag(order)
+                                }
+                            }
+                        }
                     } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
+                        Image(systemName: storySortOrder == .trending && selectedSegment == 0
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              : "line.3.horizontal.decrease.circle")
                             .foregroundColor(.appGreen)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         if selectedSegment == 0 { showingCreateStory = true }
-                        else { showingCreateJournal = true }
+                        else if selectedSegment == 1 { showingCreateJournal = true }
+                        else { showingCreateTrip = true }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -149,25 +196,56 @@ struct TripsView: View {
                     }
                 }
 
+                if !availableCountries.isEmpty {
+                    Divider().frame(height: 24)
+
+                    Menu {
+                        Button {
+                            selectedCountry = nil
+                        } label: {
+                            Label("All Countries", systemImage: selectedCountry == nil ? "checkmark" : "globe")
+                        }
+                        Divider()
+                        ForEach(availableCountries, id: \.self) { country in
+                            Button {
+                                selectedCountry = country
+                            } label: {
+                                if selectedCountry == country {
+                                    Label(country, systemImage: "checkmark")
+                                } else {
+                                    Text(country)
+                                }
+                            }
+                        }
+                    } label: {
+                        filterDropdownLabel(
+                            icon: "globe",
+                            text: selectedCountry ?? "Country",
+                            isActive: selectedCountry != nil
+                        )
+                    }
+                }
+
                 Divider().frame(height: 24)
 
-                // Country chips
-                if !availableCountries.isEmpty {
-                    FilterChip(
-                        label: selectedCountry ?? "Country",
-                        isSelected: selectedCountry != nil,
-                        icon: "globe"
-                    ) {
-                        selectedCountry = nil
-                    }
-                    ForEach(availableCountries, id: \.self) { country in
-                        FilterChip(
-                            label: country,
-                            isSelected: selectedCountry == country
-                        ) {
-                            selectedCountry = selectedCountry == country ? nil : country
+                Menu {
+                    ForEach(BudgetFilter.allCases, id: \.self) { option in
+                        Button {
+                            selectedBudget = option
+                        } label: {
+                            if selectedBudget == option {
+                                Label(option.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(option.rawValue)
+                            }
                         }
                     }
+                } label: {
+                    filterDropdownLabel(
+                        icon: "eurosign.circle",
+                        text: selectedBudget == .any ? "Budget" : selectedBudget.rawValue,
+                        isActive: selectedBudget != .any
+                    )
                 }
             }
             .padding(.horizontal)
@@ -183,9 +261,11 @@ struct TripsView: View {
             loadingView(text: "Loading stories...")
         } else if filteredStories.isEmpty {
             emptyView(
-                title: searchText.isEmpty ? "No Stories Yet" : "No Results",
-                icon: searchText.isEmpty ? "book.closed.fill" : "magnifyingglass",
-                message: searchText.isEmpty ? "Be the first to share your interrail adventure!" : "Try a different search term"
+                title: (searchText.isEmpty && !hasActiveFilter) ? "No Stories Yet" : "No Results",
+                icon: (searchText.isEmpty && !hasActiveFilter) ? "book.closed.fill" : "magnifyingglass",
+                message: (searchText.isEmpty && !hasActiveFilter)
+                    ? "Be the first to share your interrail adventure!"
+                    : "No stories match your current filters — try changing them."
             )
         } else {
             ScrollView {
@@ -247,6 +327,19 @@ struct TripsView: View {
                 .padding()
             }
         }
+    }
+
+    func filterDropdownLabel(icon: String, text: String, isActive: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon).font(.caption2)
+            Text(text).font(.caption).fontWeight(isActive ? .semibold : .regular)
+            Image(systemName: "chevron.down").font(.caption2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .foregroundColor(isActive ? .white : .primary)
+        .background(isActive ? Color.appGreen : Color(.systemFill))
+        .clipShape(Capsule())
     }
 
     @ViewBuilder

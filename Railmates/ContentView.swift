@@ -16,10 +16,18 @@ struct ContentView: View {
     @State private var selectedRadius: Double = 0
     @State private var viewMode: ViewMode = .list
     @State private var searchText = ""
+    @State private var tipSortOrder: TipSortOrder = .distance
 
     enum ViewMode: String, CaseIterable {
         case list = "List"
         case map = "Map"
+    }
+
+    enum TipSortOrder: String, CaseIterable {
+        case distance = "Nearest First"
+        case likes    = "Most Liked"
+        case rating   = "Highest Rated"
+        case newest   = "Newest"
     }
 
     let radiusOptions: [(label: String, value: Double)] = [
@@ -31,17 +39,28 @@ struct ContentView: View {
     ]
 
     var sortedTips: [LocationTip] {
-        let base: [LocationTip]
+        var base: [LocationTip]
         if let userLocation = locationManager.currentLocation {
-            let sorted = store.tips.sorted {
-                $0.distance(from: userLocation) < $1.distance(from: userLocation)
+            var locationFiltered = store.tips
+            if selectedRadius > 0 {
+                locationFiltered = locationFiltered.filter {
+                    $0.distance(from: userLocation) <= selectedRadius * 1000
+                }
             }
-            base = selectedRadius == 0 ? sorted : sorted.filter {
-                $0.distance(from: userLocation) <= selectedRadius * 1000
-            }
+            base = tipSortOrder == .distance
+                ? locationFiltered.sorted { $0.distance(from: userLocation) < $1.distance(from: userLocation) }
+                : locationFiltered
         } else {
             base = store.tips
         }
+
+        switch tipSortOrder {
+        case .distance: break
+        case .likes:    base = base.sorted { $0.likeCount > $1.likeCount }
+        case .rating:   base = base.sorted { $0.averageRating > $1.averageRating }
+        case .newest:   base = base.sorted { $0.createdAt > $1.createdAt }
+        }
+
         if searchText.isEmpty { return base }
         return base.filter { tip in
             tip.title.localizedCaseInsensitiveContains(searchText) ||
@@ -111,9 +130,15 @@ struct ContentView: View {
                                 Text(option.label).tag(option.value)
                             }
                         }
+                        Divider()
+                        Picker("Sort", selection: $tipSortOrder) {
+                            ForEach(TipSortOrder.allCases, id: \.self) { order in
+                                Text(order.rawValue).tag(order)
+                            }
+                        }
                     } label: {
-                        Label(currentRadiusLabel, systemImage: "slider.horizontal.3")
-                            .foregroundColor(.appGreen)
+                        Label(currentRadiusLabel, systemImage: tipSortOrder != .distance ? "slider.horizontal.3" : "slider.horizontal.3")
+                            .foregroundColor(tipSortOrder != .distance ? .appOchre : .appGreen)
                     }
                 }
                 ToolbarItem(placement: .principal) {

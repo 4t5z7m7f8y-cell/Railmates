@@ -27,6 +27,11 @@ struct MainTabView: View {
                     Label("Trips", systemImage: "train.side.front.car")
                 }
 
+            GuidesListView()
+                .tabItem {
+                    Label("Guides", systemImage: "book.fill")
+                }
+
             HappeningsListView()
                 .tabItem {
                     Label("Events", systemImage: "calendar")
